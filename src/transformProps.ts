@@ -33,6 +33,7 @@ import {
 } from "./funnelData";
 import { resolveStepColors } from "./funnelColors";
 import {
+  ConversionColumnContent,
   DataMode,
   DEFAULT_FORM_DATA,
   FunnelColorMode,
@@ -126,16 +127,19 @@ export default function transformProps(
     "label_content_type",
     "value",
   );
-  const showConversionColumn = pick<boolean>(
+  // legacy show_conversion_column (boolean) maps to the content selector
+  const legacyConversionVisible =
+    (fd.show_conversion_column ?? fd.showConversionColumn ?? true) !== false;
+  const conversionColumnContent = pick<ConversionColumnContent>(
     fd,
-    "showConversionColumn",
-    "show_conversion_column",
-    true,
+    "conversionColumnContent",
+    "conversion_column_content",
+    legacyConversionVisible ? "percent_previous" : "none",
   );
   const showLabels = pick<boolean>(fd, "showLabels", "show_labels", true);
   const gap = toFiniteNumber(pick<number>(fd, "gap", "gap", 8));
-  const stepThickness = toFiniteNumber(
-    pick<number>(fd, "stepThickness", "step_thickness", 0),
+  const barHeightPct = toFiniteNumber(
+    pick<number>(fd, "barHeightPct", "bar_height_pct", 50),
   );
   const numberFormat = pick<string>(
     fd,
@@ -233,10 +237,10 @@ export default function transformProps(
     dataMode,
     shape,
     labelContentType,
-    showConversionColumn,
+    conversionColumnContent,
     showLabels,
     gap,
-    stepThickness,
+    barHeightPct,
     numberFormat,
     percentFormat,
     metricLabel,

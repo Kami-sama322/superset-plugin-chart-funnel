@@ -54,15 +54,21 @@ function compareLabels(a: string, b: string): number {
 export function sortRawSteps(steps: RawStep[], sort: SortMode): RawStep[] {
   const sorted = [...steps];
   switch (sort) {
+    // ties break alphabetically by label so the order is deterministic
+    // across shapes and query runs
     case "value_asc":
-      return sorted.sort((a, b) => a.value - b.value);
+      return sorted.sort(
+        (a, b) => a.value - b.value || compareLabels(a.label, b.label),
+      );
     case "alpha_asc":
       return sorted.sort((a, b) => compareLabels(a.label, b.label));
     case "alpha_desc":
       return sorted.sort((a, b) => compareLabels(b.label, a.label));
     case "value_desc":
     default:
-      return sorted.sort((a, b) => b.value - a.value);
+      return sorted.sort(
+        (a, b) => b.value - a.value || compareLabels(a.label, b.label),
+      );
   }
 }
 

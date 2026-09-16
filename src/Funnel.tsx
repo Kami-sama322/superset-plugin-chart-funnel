@@ -53,7 +53,8 @@ const CONVERSION_COL_WIDTH = 76;
 const TOOLTIP_OFFSET = 14;
 const TOOLTIP_WIDTH = 240;
 const TOOLTIP_HEIGHT = 150;
-const MIN_STEP_HEIGHT_COMPRESSED = 4;
+/** Minimum rendered bar height after the fit scaling */
+const MIN_BAR_HEIGHT = 2;
 /** Minimum visible chart height for the viewport cap to kick in */
 const MIN_VISIBLE_HEIGHT = 150;
 
@@ -104,10 +105,10 @@ export default function Funnel(props: FunnelTransformedProps) {
     dataMode,
     shape,
     labelContentType,
-    showConversionColumn,
+    conversionColumnContent,
     showLabels,
     gap,
-    stepThickness,
+    barHeightPct,
     numberFormat,
     percentFormat,
     metricLabel,
@@ -174,45 +175,45 @@ export default function Funnel(props: FunnelTransformedProps) {
   );
 
   const stepCount = steps.length;
-  const conversionWidth = showConversionColumn ? CONVERSION_COL_WIDTH : 0;
+  const conversionWidth =
+    conversionColumnContent !== "none" ? CONVERSION_COL_WIDTH : 0;
   const innerWidth = Math.max(10, width - PAD * 2 - conversionWidth);
   const innerHeight = Math.max(10, chartHeight - PAD * 2);
-  const fixedThickness = stepThickness > 0;
+
   const isPyramid = shape === "pyramid" || shape === "pyramid_inverted";
   const isInvertedPyramid = shape === "pyramid_inverted";
 
-  // Gap is compressed when there is no room for it; pyramids have none.
-  const maxGap =
+  // Layout model: compute the requested layout from Gap + Bar height %,
+  // then scale it uniformly so the chart always fits its height.
+  // Bar height % — 50 is the automatic fit: thinner to the left, denser to
+  // the right (density trades against the gap). Gap is a physical
+  // separation; pyramids have none.
+  const reqGap = isPyramid ? 0 : gap;
+  const reqBar = Math.max(
+    MIN_BAR_HEIGHT,
+    ((innerHeight - (stepCount - 1) * reqGap) / Math.max(1, stepCount)) *
+      (barHeightPct / 50),
+  );
+  const requestedTotal = stepCount * reqBar + (stepCount - 1) * reqGap;
+  const fitScale =
+    requestedTotal > 0 ? Math.min(1, innerHeight / requestedTotal) : 1;
+  const barHeight = Math.max(MIN_BAR_HEIGHT, reqBar * fitScale);
+  const effectiveGap =
     stepCount > 1
       ? Math.max(
           0,
-          (innerHeight - stepCount * MIN_STEP_HEIGHT_COMPRESSED) /
-            (stepCount - 1),
-        )
-      : 0;
-  const effectiveGap = isPyramid ? 0 : Math.min(gap, maxGap);
-  // Bars always fit: a fixed thickness is scaled down uniformly when the
-  // steps would overflow the chart height.
-  const availableForBars = Math.max(
-    0,
-    innerHeight - (stepCount - 1) * effectiveGap,
-  );
-  const stepHeight =
-    stepCount > 0
-      ? Math.min(
-          availableForBars / stepCount,
-          Math.max(
-            MIN_STEP_HEIGHT_COMPRESSED,
-            fixedThickness ? stepThickness : availableForBars / stepCount,
+          Math.min(
+            reqGap,
+            (innerHeight - stepCount * barHeight) / (stepCount - 1),
           ),
         )
       : 0;
-  const rowsHeight = stepCount * stepHeight + (stepCount - 1) * effectiveGap;
+  const rowsHeight = stepCount * barHeight + (stepCount - 1) * effectiveGap;
   const topOffset = PAD + Math.max(0, (innerHeight - rowsHeight) / 2);
   const centerX = PAD + innerWidth / 2;
 
   const stepTop = (index: number) =>
-    topOffset + index * (stepHeight + effectiveGap);
+    topOffset + index * (barHeight + effectiveGap);
   const barWidth = (step: FunnelStep) => step.widthRatio * innerWidth;
   const barLeft = (step: FunnelStep) => centerX - barWidth(step) / 2;
   /** top/bottom width of the geometric pyramid band at the given index */
@@ -237,7 +238,7 @@ export default function Funnel(props: FunnelTransformedProps) {
     shape === "funnel_smooth" && stepCount > 0
       ? (() => {
           const knotsY = steps.map((_, index) => stepTop(index));
-          knotsY.push(stepTop(stepCount - 1) + stepHeight);
+          knotsY.push(stepTop(stepCount - 1) + barHeight);
           const knotsW = steps.map((step) => barWidth(step));
           knotsW.push(knotsW[stepCount - 1]);
           return { knotsY, knotsW, tangents: monotoneTangents(knotsY, knotsW) };
@@ -368,7 +369,7 @@ export default function Funnel(props: FunnelTransformedProps) {
                     x={barLeft(step)}
                     y={stepTop(index)}
                     width={Math.max(0, barWidth(step))}
-                    height={stepHeight}
+                    height={barHeight}
                     rx={2}
                     {...commonProps}
                   />
@@ -378,7 +379,7 @@ export default function Funnel(props: FunnelTransformedProps) {
                 const { top: topWidth, bottom: bottomWidth } =
                   pyramidBandWidths(index);
                 const y1 = stepTop(index);
-                const y2 = y1 + stepHeight;
+                const y2 = y1 + barHeight;
                 const points = [
                   [centerX - topWidth / 2, y1],
                   [centerX + topWidth / 2, y1],
@@ -399,7 +400,7 @@ export default function Funnel(props: FunnelTransformedProps) {
                 const d = buildSmoothBandPath({
                   cx: centerX,
                   y0: stepTop(index),
-                  height: stepHeight,
+                  height: barHeight,
                   knotsY: smoothKnots.knotsY,
                   knotsW: smoothKnots.knotsW,
                   tangents: smoothKnots.tangents,
@@ -407,12 +408,13 @@ export default function Funnel(props: FunnelTransformedProps) {
                 });
                 return <path key={step.label + index} d={d} {...commonProps} />;
               }
-              // shape === "funnel": trapezoids with sharp transitions
+              // shape === "funnel": trapezoids with sharp transitions; each
+              // band keeps its own height so equal values render equally
               const nextStep = steps[index + 1];
               const topWidth = barWidth(step);
               const bottomWidth = nextStep ? barWidth(nextStep) : topWidth;
               const y1 = stepTop(index);
-              const y2 = y1 + stepHeight + (nextStep ? effectiveGap : 0);
+              const y2 = y1 + barHeight;
               const points = [
                 [centerX - topWidth / 2, y1],
                 [centerX + topWidth / 2, y1],
@@ -446,7 +448,7 @@ export default function Funnel(props: FunnelTransformedProps) {
                       left: bandLabelLeft + 10,
                       top: stepTop(index),
                       width: Math.max(0, bandLabelWidth - 20),
-                      height: stepHeight,
+                      height: barHeight,
                       display: "flex",
                       alignItems: "center",
                       color: isDarkColor(step.color) ? "#fff" : theme.colorText,
@@ -469,13 +471,13 @@ export default function Funnel(props: FunnelTransformedProps) {
                     )}
                   </span>
                 ) : null}
-                {showConversionColumn ? (
+                {conversionColumnContent !== "none" ? (
                   <span
                     style={{
                       position: "absolute",
                       right: PAD + 4,
                       top: stepTop(index),
-                      height: stepHeight,
+                      height: barHeight,
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "flex-end",
@@ -486,7 +488,11 @@ export default function Funnel(props: FunnelTransformedProps) {
                       pointerEvents: "none",
                     }}
                   >
-                    {percentText(step.percentPrevious, percentFormatter)}
+                    {conversionColumnContent === "value"
+                      ? valueFormatter(step.value)
+                      : conversionColumnContent === "percent_first"
+                        ? percentText(step.percentFirst, percentFormatter)
+                        : percentText(step.percentPrevious, percentFormatter)}
                   </span>
                 ) : null}
               </div>

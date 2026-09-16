@@ -184,6 +184,33 @@ const orderSteps: RawStep[] = [
   { label: "small", value: 10 },
 ];
 
+test("sortRawSteps breaks value ties alphabetically and deterministically", () => {
+  const tied: RawStep[] = [
+    { label: "global_search", value: 1 },
+    { label: "commits", value: 1 },
+  ];
+  // ascending and descending agree on tie order -> pyramid and inverted
+  // render the same sequence
+  expect(sortRawSteps(tied, "value_asc").map((s) => s.label)).toEqual([
+    "commits",
+    "global_search",
+  ]);
+  expect(sortRawSteps(tied, "value_desc").map((s) => s.label)).toEqual([
+    "commits",
+    "global_search",
+  ]);
+  // independent of the input order
+  const flipped: RawStep[] = [tied[1], tied[0]];
+  expect(sortRawSteps(flipped, "value_asc").map((s) => s.label)).toEqual([
+    "commits",
+    "global_search",
+  ]);
+  expect(sortRawSteps(flipped, "value_desc").map((s) => s.label)).toEqual([
+    "commits",
+    "global_search",
+  ]);
+});
+
 test("orderStepsForRendering keeps insertion order in fields mode for regular shapes", () => {
   const result = orderStepsForRendering(
     [

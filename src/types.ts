@@ -33,6 +33,11 @@ export type FunnelShape =
   | "funnel_smooth"
   | "pyramid"
   | "pyramid_inverted";
+export type ConversionColumnContent =
+  | "none"
+  | "value"
+  | "percent_previous"
+  | "percent_first";
 export type FunnelColorMode = "gradient" | "custom";
 export type SortMode = "value_desc" | "value_asc" | "alpha_asc" | "alpha_desc";
 export type LabelContentType =
@@ -73,8 +78,8 @@ export type FunnelQueryFormData = QueryFormData & {
   stepColors?: Record<string, string>;
   label_content_type?: LabelContentType;
   labelContentType?: LabelContentType;
-  show_conversion_column?: boolean;
-  showConversionColumn?: boolean;
+  conversion_column_content?: ConversionColumnContent;
+  conversionColumnContent?: ConversionColumnContent;
   number_format?: string;
   numberFormat?: string;
   percent_format?: string;
@@ -82,8 +87,8 @@ export type FunnelQueryFormData = QueryFormData & {
   gap?: number;
   show_labels?: boolean;
   showLabels?: boolean;
-  step_thickness?: number;
-  stepThickness?: number;
+  bar_height_pct?: number;
+  barHeightPct?: number;
   row_limit?: number;
   tooltip_contents?: unknown[];
   tooltipContents?: unknown[];
@@ -100,10 +105,10 @@ export type FunnelTransformedProps = {
   dataMode: DataMode;
   shape: FunnelShape;
   labelContentType: LabelContentType;
-  showConversionColumn: boolean;
+  conversionColumnContent: ConversionColumnContent;
   showLabels: boolean;
   gap: number;
-  stepThickness: number;
+  barHeightPct: number;
   numberFormat: string;
   percentFormat: string;
   metricLabel: string;
@@ -123,12 +128,12 @@ export const DEFAULT_FORM_DATA: Partial<FunnelQueryFormData> = {
   shape: "bars",
   color_mode: "gradient",
   label_content_type: "value",
-  show_conversion_column: true,
+  conversion_column_content: "percent_previous",
   number_format: "SMART_NUMBER",
   percent_format: ".1%",
   gap: 8,
   show_labels: true,
-  step_thickness: 0,
+  bar_height_pct: 50,
   row_limit: 50,
   tooltip_contents: [],
   tooltip_template: "",

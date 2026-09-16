@@ -33,8 +33,9 @@
   spline — no sharp jumps), *Pyramid* (triangle with equal-height slices, the
   smallest value at the apex) and *Inverted pyramid* (the largest value at
   the top base)
-- **Step thickness**: fixed bar height in pixels or auto (fill the available
-  height)
+- **Bar height, %**: relative bar height — 50% is the automatic fit,
+  lower makes bars thinner, higher denser; the gap physically separates
+  bars and the chart always fits the screen
 - **Colors**: gradient over a sequential color scheme or a custom color
   per step
 - **Tooltips**: pick extra columns and/or provide a Handlebars template
@@ -158,11 +159,10 @@ Columns selected in **Tooltip contents** are available by their names
 | Color mode | Gradient / Custom per-step colors |
 | Gradient color scheme | Sequential scheme (gradient mode) |
 | Step colors | Ready-made per-step picker list (populated from the query result / step fields); unset steps fall back to the categorical scheme |
-| Label content | Data value / % of first / % of previous / combos |
-| Conversion column | % of previous shown to the right of bars |
-| Show labels / Gap | Label visibility and bar spacing |
-| Step thickness | Bar height in px (0 = auto, fills the height) |
-| Number format / Percent format | D3 formats (`SMART_NUMBER`, `.1%` …) |
+| Show labels + Label content | Label visibility and what the bar label shows: Data value / % of first / % of previous / combos |
+| Conversion column | Right-side column content: None / Data value / % of previous / % of first |
+| Bar height, % | Relative bar height: 50% = automatic fit, lower = thinner, higher = denser. Gap is a physical separation and never shrinks bars; pyramids stay contiguous |
+| Number format / Percent format | Standard Superset D3 format controls |
 
 ---
 

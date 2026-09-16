@@ -26,6 +26,9 @@ import {
   ControlPanelConfig,
   ControlPanelState,
   ControlPanelsContainerProps,
+  D3_FORMAT_DOCS,
+  D3_FORMAT_OPTIONS,
+  DEFAULT_NUMBER_FORMAT,
   sharedControls,
 } from "@superset-ui/chart-controls";
 import StepColorsControl from "./controls/StepColorsControl";
@@ -356,6 +359,17 @@ const config: ControlPanelConfig = {
         ],
         [
           {
+            name: "show_labels",
+            config: {
+              type: "CheckboxControl",
+              label: t("Show labels"),
+              renderTrigger: true,
+              default: true,
+            },
+          },
+        ],
+        [
+          {
             name: "label_content_type",
             config: {
               type: "SelectControl",
@@ -363,6 +377,8 @@ const config: ControlPanelConfig = {
               description: t("What to show on each funnel bar"),
               renderTrigger: true,
               default: "value",
+              visibility: ({ controls }: ControlPanelsContainerProps) =>
+                controls?.show_labels?.value !== false,
               options: [
                 { label: t("Data value"), value: "value" },
                 { label: t("Percent of first"), value: "percent_first" },
@@ -381,15 +397,19 @@ const config: ControlPanelConfig = {
         ],
         [
           {
-            name: "show_conversion_column",
+            name: "conversion_column_content",
             config: {
-              type: "CheckboxControl",
+              type: "SelectControl",
               label: t("Conversion column"),
-              description: t(
-                "Show percent of previous step to the right of each bar",
-              ),
+              description: t("What to show to the right of each bar"),
               renderTrigger: true,
-              default: true,
+              default: "percent_previous",
+              options: [
+                { label: t("None"), value: "none" },
+                { label: t("Data value"), value: "value" },
+                { label: t("Percent of previous"), value: "percent_previous" },
+                { label: t("Percent of first"), value: "percent_first" },
+              ],
             },
           },
         ],
@@ -399,17 +419,6 @@ const config: ControlPanelConfig = {
       label: t("Advanced display settings"),
       expanded: false,
       controlSetRows: [
-        [
-          {
-            name: "show_labels",
-            config: {
-              type: "CheckboxControl",
-              label: t("Show labels"),
-              renderTrigger: true,
-              default: true,
-            },
-          },
-        ],
         [
           {
             name: "gap",
@@ -427,18 +436,18 @@ const config: ControlPanelConfig = {
         ],
         [
           {
-            name: "step_thickness",
+            name: "bar_height_pct",
             config: {
               type: "SliderControl",
-              label: t("Step thickness"),
+              label: t("Bar height, %"),
               description: t(
-                "Bar height in pixels. 0 fills the available height automatically.",
+                "Relative bar height: 50% is the automatic fit, lower values make bars thinner, higher values denser. Full height in pyramid shapes.",
               ),
               renderTrigger: true,
-              min: 0,
-              max: 80,
-              step: 1,
-              default: 0,
+              min: 10,
+              max: 100,
+              step: 5,
+              default: 50,
             },
           },
         ],
@@ -448,16 +457,11 @@ const config: ControlPanelConfig = {
             config: {
               type: "SelectControl",
               label: t("Number format"),
-              description: t("D3 format for step values"),
+              description: D3_FORMAT_DOCS,
               renderTrigger: true,
-              default: "SMART_NUMBER",
-              options: [
-                { label: "Smart number", value: "SMART_NUMBER" },
-                { label: "1,234", value: ",.0f" },
-                { label: "1,234.56", value: ",.2f" },
-                { label: "1,234 (integer)", value: ",d" },
-                { label: "12.3k", value: ".3s" },
-              ],
+              default: DEFAULT_NUMBER_FORMAT,
+              choices: D3_FORMAT_OPTIONS,
+              tokenSeparators: ["\n", "\t", ";"],
             },
           },
         ],
