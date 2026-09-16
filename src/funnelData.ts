@@ -73,12 +73,12 @@ export function sortRawSteps(steps: RawStep[], sort: SortMode): RawStep[] {
 }
 
 /**
- * Final step order before the geometric layout.
- * - Pyramid puts the smallest value at the apex (largest at the base) and the
- *   inverted pyramid the largest at the top base — in both data modes.
- * - Fields mode keeps the insertion order for the other shapes
- *   (step order = field order).
- * - Dimension mode follows the sort control (value descending by default).
+ * Final step order before the geometric layout — the exact top-to-bottom
+ * render order. Pyramid and inverted pyramid share the same stage order
+ * (smallest at the apex, ties alphabetical), the inverted one is just
+ * rendered mirrored, so the apex stage is the same in both shapes.
+ * Fields mode keeps the insertion order for the other shapes
+ * (step order = field order). Dimension mode follows the sort control.
  */
 export function orderStepsForRendering(
   steps: RawStep[],
@@ -93,7 +93,9 @@ export function orderStepsForRendering(
     return sortRawSteps(steps, "value_asc");
   }
   if (shape === "pyramid_inverted") {
-    return sortRawSteps(steps, "value_desc");
+    // mirrored render of the regular pyramid: same apex stage
+    const ascending = sortRawSteps(steps, "value_asc");
+    return ascending.reverse();
   }
   if (dataMode === "fields") {
     return steps;
@@ -101,10 +103,32 @@ export function orderStepsForRendering(
   return sortRawSteps(steps, sort);
 }
 
+export type WidthScale = "linear" | "sqrt" | "log";
+
+export function widthRatioFor(
+  value: number,
+  maxValue: number,
+  scale: WidthScale,
+): number {
+  const v = Math.max(0, value);
+  const m = Math.max(0, maxValue);
+  if (m <= 0) {
+    return 1;
+  }
+  if (scale === "sqrt") {
+    return Math.sqrt(v) / Math.sqrt(m);
+  }
+  if (scale === "log") {
+    return Math.log1p(v) / Math.log1p(m);
+  }
+  return v / m;
+}
+
 export function buildFunnelSteps(
   sorted: RawStep[],
-  reverseReference = false,
+  options: { reverseReference?: boolean; widthScale?: WidthScale } = {},
 ): FunnelStepBase[] {
+  const { reverseReference = false, widthScale = "linear" } = options;
   const n = sorted.length;
   const maxValue = sorted.reduce(
     (max, step) => Math.max(max, toFiniteNumber(step.value)),
@@ -137,7 +161,7 @@ export function buildFunnelSteps(
           : previousValue > 0
             ? value / previousValue
             : null,
-      widthRatio: maxValue > 0 ? Math.max(0, value) / maxValue : 1,
+      widthRatio: widthRatioFor(value, maxValue, widthScale),
       filterValue: step.filterValue ?? step.label,
       extra: step.extra || {},
     };

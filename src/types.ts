@@ -38,6 +38,7 @@ export type ConversionColumnContent =
   | "value"
   | "percent_previous"
   | "percent_first";
+export type WidthScale = "linear" | "sqrt" | "log";
 export type FunnelColorMode = "gradient" | "custom";
 export type SortMode = "value_desc" | "value_asc" | "alpha_asc" | "alpha_desc";
 export type LabelContentType =
@@ -89,6 +90,8 @@ export type FunnelQueryFormData = QueryFormData & {
   showLabels?: boolean;
   bar_height_pct?: number;
   barHeightPct?: number;
+  width_scale?: WidthScale;
+  widthScale?: WidthScale;
   row_limit?: number;
   tooltip_contents?: unknown[];
   tooltipContents?: unknown[];
@@ -109,6 +112,7 @@ export type FunnelTransformedProps = {
   showLabels: boolean;
   gap: number;
   barHeightPct: number;
+  widthScale: WidthScale;
   numberFormat: string;
   percentFormat: string;
   metricLabel: string;
@@ -133,7 +137,8 @@ export const DEFAULT_FORM_DATA: Partial<FunnelQueryFormData> = {
   percent_format: ".1%",
   gap: 8,
   show_labels: true,
-  bar_height_pct: 50,
+  bar_height_pct: 100,
+  width_scale: "sqrt",
   row_limit: 50,
   tooltip_contents: [],
   tooltip_template: "",

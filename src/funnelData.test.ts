@@ -152,7 +152,7 @@ test("buildFunnelSteps reverseReference treats the last step as first", () => {
       { label: "mid", value: 20 },
       { label: "base", value: 40 },
     ],
-    true,
+    { reverseReference: true },
   );
   // base (largest, last) is the process start
   expect(steps[2].percentFirst).toBe(1);
@@ -171,11 +171,37 @@ test("buildFunnelSteps reverseReference guards zero reference", () => {
       { label: "apex", value: 5 },
       { label: "base", value: 0 },
     ],
-    true,
+    { reverseReference: true },
   );
   expect(steps[1].percentFirst).toBe(1);
   expect(steps[0].percentFirst).toBeNull();
   expect(steps[0].percentPrevious).toBeNull();
+});
+
+test("buildFunnelSteps sqrt and log scales compress the width range", () => {
+  const raw = [
+    { label: "huge", value: 10000 },
+    { label: "tiny", value: 1 },
+  ];
+  const linear = buildFunnelSteps(raw, { widthScale: "linear" });
+  const sqrt = buildFunnelSteps(raw, { widthScale: "sqrt" });
+  const log = buildFunnelSteps(raw, { widthScale: "log" });
+  expect(linear[1].widthRatio).toBeCloseTo(0.0001);
+  // sqrt lifts the small value far above linear
+  expect(sqrt[1].widthRatio).toBeCloseTo(0.01);
+  // log lifts it even higher
+  expect(log[1].widthRatio).toBeGreaterThan(sqrt[1].widthRatio);
+  // tops stay at full width
+  expect(linear[0].widthRatio).toBe(1);
+  expect(sqrt[0].widthRatio).toBe(1);
+  expect(log[0].widthRatio).toBe(1);
+});
+
+test("buildFunnelSteps width scale guards zero max", () => {
+  const steps = buildFunnelSteps([{ label: "a", value: 0 }], {
+    widthScale: "log",
+  });
+  expect(steps[0].widthRatio).toBe(1);
 });
 
 const orderSteps: RawStep[] = [
@@ -248,6 +274,31 @@ test("orderStepsForRendering puts the smallest value at the pyramid apex", () =>
     sort: "value_desc",
   });
   expect(result.map((s) => s.label)).toEqual(["small", "mid", "big"]);
+});
+
+test("orderStepsForRendering keeps the same apex stage in both pyramids for ties", () => {
+  const tied: RawStep[] = [
+    { label: "commits", value: 1 },
+    { label: "global_search", value: 1 },
+  ];
+  const options = {
+    dataMode: "dimension" as const,
+    sort: "value_desc" as const,
+  };
+  const pyramid = orderStepsForRendering(tied, {
+    shape: "pyramid",
+    ...options,
+  });
+  const inverted = orderStepsForRendering(tied, {
+    shape: "pyramid_inverted",
+    ...options,
+  });
+  // pyramid renders apex (top) first; inverted renders apex (bottom) last
+  expect(pyramid[0].label).toBe("commits");
+  expect(inverted[inverted.length - 1].label).toBe("commits");
+  // and the base stage matches too
+  expect(pyramid[pyramid.length - 1].label).toBe("global_search");
+  expect(inverted[0].label).toBe("global_search");
 });
 
 test("orderStepsForRendering puts the largest value at the inverted pyramid top", () => {

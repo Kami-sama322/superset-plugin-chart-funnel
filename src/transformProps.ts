@@ -30,6 +30,7 @@ import {
   orderStepsForRendering,
   RawStep,
   toFiniteNumber,
+  type WidthScale,
 } from "./funnelData";
 import { resolveStepColors } from "./funnelColors";
 import {
@@ -127,20 +128,28 @@ export default function transformProps(
     "label_content_type",
     "value",
   );
-  // legacy show_conversion_column (boolean) maps to the content selector
-  const legacyConversionVisible =
-    (fd.show_conversion_column ?? fd.showConversionColumn ?? true) !== false;
-  const conversionColumnContent = pick<ConversionColumnContent>(
+  // The checkbox is the master switch: when off, the column is hidden even
+  // though the (hidden) content control keeps its last value in form_data.
+  const showConversionColumn = pick<boolean>(
     fd,
-    "conversionColumnContent",
-    "conversion_column_content",
-    legacyConversionVisible ? "percent_previous" : "none",
+    "showConversionColumn",
+    "show_conversion_column",
+    true,
   );
+  const conversionColumnContent = !showConversionColumn
+    ? "none"
+    : pick<ConversionColumnContent>(
+        fd,
+        "conversionColumnContent",
+        "conversion_column_content",
+        "percent_previous",
+      );
   const showLabels = pick<boolean>(fd, "showLabels", "show_labels", true);
   const gap = toFiniteNumber(pick<number>(fd, "gap", "gap", 8));
   const barHeightPct = toFiniteNumber(
-    pick<number>(fd, "barHeightPct", "bar_height_pct", 50),
+    pick<number>(fd, "barHeightPct", "bar_height_pct", 100),
   );
+  const widthScale = pick<WidthScale>(fd, "widthScale", "width_scale", "sqrt");
   const numberFormat = pick<string>(
     fd,
     "numberFormat",
@@ -213,9 +222,14 @@ export default function transformProps(
     dataMode,
     sort: fd.sort ?? "value_desc",
   });
-  // In the pyramid the process starts at the base (the widest, largest band),
-  // so "first"/"previous" references are reversed.
-  const base = buildFunnelSteps(sorted, shape === "pyramid");
+  // The pyramid's process starts at the base (the widest, largest band):
+  // its array is ascending, so the "first"/"previous" references are
+  // reversed. The inverted pyramid renders the same order mirrored
+  // (base first), so its references are direct.
+  const base = buildFunnelSteps(sorted, {
+    reverseReference: shape === "pyramid",
+    widthScale,
+  });
 
   const colors = resolveStepColors({
     colorMode,
@@ -241,6 +255,7 @@ export default function transformProps(
     showLabels,
     gap,
     barHeightPct,
+    widthScale,
     numberFormat,
     percentFormat,
     metricLabel,

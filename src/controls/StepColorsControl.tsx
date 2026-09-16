@@ -137,7 +137,6 @@ export default function StepColorsControl({
                 emit({ ...colors, [label]: toHex(color) })
               }
               presets={[{ label: "Theme colors", colors: presetColors }]}
-              showText
             />
             {removable ? (
               <button

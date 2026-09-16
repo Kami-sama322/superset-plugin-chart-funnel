@@ -397,15 +397,26 @@ const config: ControlPanelConfig = {
         ],
         [
           {
+            name: "show_conversion_column",
+            config: {
+              type: "CheckboxControl",
+              label: t("Conversion column"),
+              renderTrigger: true,
+              default: true,
+            },
+          },
+        ],
+        [
+          {
             name: "conversion_column_content",
             config: {
               type: "SelectControl",
-              label: t("Conversion column"),
-              description: t("What to show to the right of each bar"),
+              label: t("Conversion column content"),
               renderTrigger: true,
               default: "percent_previous",
+              visibility: ({ controls }: ControlPanelsContainerProps) =>
+                controls?.show_conversion_column?.value !== false,
               options: [
-                { label: t("None"), value: "none" },
                 { label: t("Data value"), value: "value" },
                 { label: t("Percent of previous"), value: "percent_previous" },
                 { label: t("Percent of first"), value: "percent_first" },
@@ -441,13 +452,33 @@ const config: ControlPanelConfig = {
               type: "SliderControl",
               label: t("Bar height, %"),
               description: t(
-                "Relative bar height: 50% is the automatic fit, lower values make bars thinner, higher values denser. Full height in pyramid shapes.",
+                "100% — bars fill the screen (together with the gap), lower values make them thinner. Bars and gap scale down together when they do not fit.",
               ),
               renderTrigger: true,
               min: 10,
               max: 100,
               step: 5,
-              default: 50,
+              default: 100,
+            },
+          },
+        ],
+        [
+          {
+            name: "width_scale",
+            config: {
+              type: "SelectControl",
+              label: t("Width scale"),
+              description: t(
+                "How bar width maps to values. Logarithmic / square root smooth out extreme outliers so small steps stay visible.",
+              ),
+              renderTrigger: true,
+              default: "sqrt",
+              clearable: false,
+              options: [
+                { label: t("Linear"), value: "linear" },
+                { label: t("Square root"), value: "sqrt" },
+                { label: t("Logarithmic"), value: "log" },
+              ],
             },
           },
         ],

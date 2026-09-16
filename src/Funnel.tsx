@@ -183,38 +183,31 @@ export default function Funnel(props: FunnelTransformedProps) {
   const isPyramid = shape === "pyramid" || shape === "pyramid_inverted";
   const isInvertedPyramid = shape === "pyramid_inverted";
 
-  // Layout model: compute the requested layout from Gap + Bar height %,
-  // then scale it uniformly so the chart always fits its height.
-  // Bar height % — 50 is the automatic fit: thinner to the left, denser to
-  // the right (density trades against the gap). Gap is a physical
-  // separation; pyramids have none.
+  // Layout model: request the layout from Bar height % (share of the full
+  // height) + Gap, then scale the whole thing down uniformly when it does
+  // not fit. Bars and gap shrink together — the chart always uses exactly
+  // the available height and never jitters or overflows.
   const reqGap = isPyramid ? 0 : gap;
-  const reqBar = Math.max(
-    MIN_BAR_HEIGHT,
-    ((innerHeight - (stepCount - 1) * reqGap) / Math.max(1, stepCount)) *
-      (barHeightPct / 50),
-  );
+  const reqBar =
+    stepCount > 0 ? (innerHeight / stepCount) * (barHeightPct / 100) : 0;
   const requestedTotal = stepCount * reqBar + (stepCount - 1) * reqGap;
   const fitScale =
     requestedTotal > 0 ? Math.min(1, innerHeight / requestedTotal) : 1;
   const barHeight = Math.max(MIN_BAR_HEIGHT, reqBar * fitScale);
-  const effectiveGap =
-    stepCount > 1
-      ? Math.max(
-          0,
-          Math.min(
-            reqGap,
-            (innerHeight - stepCount * barHeight) / (stepCount - 1),
-          ),
-        )
-      : 0;
+  const effectiveGap = Math.max(0, reqGap * fitScale);
   const rowsHeight = stepCount * barHeight + (stepCount - 1) * effectiveGap;
   const topOffset = PAD + Math.max(0, (innerHeight - rowsHeight) / 2);
   const centerX = PAD + innerWidth / 2;
 
   const stepTop = (index: number) =>
     topOffset + index * (barHeight + effectiveGap);
-  const barWidth = (step: FunnelStep) => step.widthRatio * innerWidth;
+  // Bars never disappear completely: a step with a value keeps a small
+  // visible minimum width even in linear scale with huge outliers.
+  const MIN_BAR_WIDTH_PX = 2;
+  const barWidth = (step: FunnelStep) => {
+    const scaled = step.widthRatio * innerWidth;
+    return step.value > 0 ? Math.max(scaled, MIN_BAR_WIDTH_PX) : 0;
+  };
   const barLeft = (step: FunnelStep) => centerX - barWidth(step) / 2;
   /** top/bottom width of the geometric pyramid band at the given index */
   const pyramidBandWidths = (index: number) => {
