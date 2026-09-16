@@ -35,6 +35,7 @@ import {
 import { resolveStepColors } from "./funnelColors";
 import {
   ConversionColumnContent,
+  ConversionColumnPosition,
   DataMode,
   DEFAULT_FORM_DATA,
   FunnelColorMode,
@@ -43,6 +44,7 @@ import {
   FunnelStatusKind,
   FunnelStep,
   FunnelTransformedProps,
+  LabelAlignment,
   LabelContentType,
 } from "./types";
 
@@ -144,6 +146,18 @@ export default function transformProps(
         "conversion_column_content",
         "percent_previous",
       );
+  const conversionColumnPosition = pick<ConversionColumnPosition>(
+    fd,
+    "conversionColumnPosition",
+    "conversion_column_position",
+    "right",
+  );
+  const labelAlignment = pick<LabelAlignment>(
+    fd,
+    "labelAlignment",
+    "label_alignment",
+    "left",
+  );
   const showLabels = pick<boolean>(fd, "showLabels", "show_labels", true);
   const gap = toFiniteNumber(pick<number>(fd, "gap", "gap", 8));
   const barHeightPct = toFiniteNumber(
@@ -252,6 +266,8 @@ export default function transformProps(
     shape,
     labelContentType,
     conversionColumnContent,
+    conversionColumnPosition,
+    labelAlignment,
     showLabels,
     gap,
     barHeightPct,

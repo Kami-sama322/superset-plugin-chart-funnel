@@ -38,6 +38,8 @@ export type ConversionColumnContent =
   | "value"
   | "percent_previous"
   | "percent_first";
+export type ConversionColumnPosition = "left" | "right";
+export type LabelAlignment = "left" | "center" | "right";
 export type WidthScale = "linear" | "sqrt" | "log";
 export type FunnelColorMode = "gradient" | "custom";
 export type SortMode = "value_desc" | "value_asc" | "alpha_asc" | "alpha_desc";
@@ -81,6 +83,10 @@ export type FunnelQueryFormData = QueryFormData & {
   labelContentType?: LabelContentType;
   conversion_column_content?: ConversionColumnContent;
   conversionColumnContent?: ConversionColumnContent;
+  conversion_column_position?: ConversionColumnPosition;
+  conversionColumnPosition?: ConversionColumnPosition;
+  label_alignment?: LabelAlignment;
+  labelAlignment?: LabelAlignment;
   number_format?: string;
   numberFormat?: string;
   percent_format?: string;
@@ -109,6 +115,8 @@ export type FunnelTransformedProps = {
   shape: FunnelShape;
   labelContentType: LabelContentType;
   conversionColumnContent: ConversionColumnContent;
+  conversionColumnPosition: ConversionColumnPosition;
+  labelAlignment: LabelAlignment;
   showLabels: boolean;
   gap: number;
   barHeightPct: number;
@@ -133,6 +141,8 @@ export const DEFAULT_FORM_DATA: Partial<FunnelQueryFormData> = {
   color_mode: "gradient",
   label_content_type: "value",
   conversion_column_content: "percent_previous",
+  conversion_column_position: "right",
+  label_alignment: "left",
   number_format: "SMART_NUMBER",
   percent_format: ".1%",
   gap: 8,

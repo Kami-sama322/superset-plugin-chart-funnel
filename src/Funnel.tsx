@@ -106,6 +106,8 @@ export default function Funnel(props: FunnelTransformedProps) {
     shape,
     labelContentType,
     conversionColumnContent,
+    conversionColumnPosition,
+    labelAlignment,
     showLabels,
     gap,
     barHeightPct,
@@ -175,8 +177,11 @@ export default function Funnel(props: FunnelTransformedProps) {
   );
 
   const stepCount = steps.length;
-  const conversionWidth =
-    conversionColumnContent !== "none" ? CONVERSION_COL_WIDTH : 0;
+  const conversionShown = conversionColumnContent !== "none";
+  const conversionOnLeft =
+    conversionShown && conversionColumnPosition === "left";
+  const conversionWidth = conversionShown ? CONVERSION_COL_WIDTH : 0;
+  const contentLeft = PAD + (conversionOnLeft ? conversionWidth : 0);
   const innerWidth = Math.max(10, width - PAD * 2 - conversionWidth);
   const innerHeight = Math.max(10, chartHeight - PAD * 2);
 
@@ -197,7 +202,7 @@ export default function Funnel(props: FunnelTransformedProps) {
   const effectiveGap = Math.max(0, reqGap * fitScale);
   const rowsHeight = stepCount * barHeight + (stepCount - 1) * effectiveGap;
   const topOffset = PAD + Math.max(0, (innerHeight - rowsHeight) / 2);
-  const centerX = PAD + innerWidth / 2;
+  const centerX = contentLeft + innerWidth / 2;
 
   const stepTop = (index: number) =>
     topOffset + index * (barHeight + effectiveGap);
@@ -432,18 +437,27 @@ export default function Funnel(props: FunnelTransformedProps) {
             const bandLabelLeft = isPyramid
               ? centerX - bandLabelWidth / 2
               : barLeft(step);
+            const labelJustify =
+              labelAlignment === "center"
+                ? "center"
+                : labelAlignment === "right"
+                  ? "flex-end"
+                  : "flex-start";
             return (
               <div key={`overlay-${step.label}-${index}`}>
                 {showLabels ? (
                   <span
                     style={{
                       position: "absolute",
-                      left: bandLabelLeft + 10,
+                      left: bandLabelLeft,
                       top: stepTop(index),
-                      width: Math.max(0, bandLabelWidth - 20),
+                      width: Math.max(0, bandLabelWidth),
                       height: barHeight,
                       display: "flex",
                       alignItems: "center",
+                      justifyContent: labelJustify,
+                      padding: `0 ${PAD + 2}px`,
+                      boxSizing: "border-box",
                       color: isDarkColor(step.color) ? "#fff" : theme.colorText,
                       fontSize: 12,
                       fontWeight: 500,
@@ -464,16 +478,20 @@ export default function Funnel(props: FunnelTransformedProps) {
                     )}
                   </span>
                 ) : null}
-                {conversionColumnContent !== "none" ? (
+                {conversionShown ? (
                   <span
                     style={{
                       position: "absolute",
-                      right: PAD + 4,
+                      ...(conversionOnLeft
+                        ? { left: contentLeft + 4 }
+                        : { right: PAD + 4 }),
                       top: stepTop(index),
                       height: barHeight,
                       display: "flex",
                       alignItems: "center",
-                      justifyContent: "flex-end",
+                      justifyContent: conversionOnLeft
+                        ? "flex-start"
+                        : "flex-end",
                       width: conversionWidth - 12,
                       color: theme.colorTextSecondary,
                       fontSize: 12,

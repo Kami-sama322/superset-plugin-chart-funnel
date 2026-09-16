@@ -370,6 +370,25 @@ const config: ControlPanelConfig = {
         ],
         [
           {
+            name: "label_alignment",
+            config: {
+              type: "SelectControl",
+              label: t("Label alignment"),
+              renderTrigger: true,
+              default: "left",
+              clearable: false,
+              visibility: ({ controls }: ControlPanelsContainerProps) =>
+                controls?.show_labels?.value !== false,
+              options: [
+                { label: t("Left"), value: "left" },
+                { label: t("Center"), value: "center" },
+                { label: t("Right"), value: "right" },
+              ],
+            },
+          },
+        ],
+        [
+          {
             name: "label_content_type",
             config: {
               type: "SelectControl",
@@ -420,6 +439,24 @@ const config: ControlPanelConfig = {
                 { label: t("Data value"), value: "value" },
                 { label: t("Percent of previous"), value: "percent_previous" },
                 { label: t("Percent of first"), value: "percent_first" },
+              ],
+            },
+          },
+        ],
+        [
+          {
+            name: "conversion_column_position",
+            config: {
+              type: "SelectControl",
+              label: t("Conversion column position"),
+              renderTrigger: true,
+              default: "right",
+              clearable: false,
+              visibility: ({ controls }: ControlPanelsContainerProps) =>
+                controls?.show_conversion_column?.value !== false,
+              options: [
+                { label: t("Left"), value: "left" },
+                { label: t("Right"), value: "right" },
               ],
             },
           },
