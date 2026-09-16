@@ -74,7 +74,7 @@ export function normalizeHexColor(value: unknown): string | null {
 
 function categoricalSchemeColors(): string[] {
   const scheme = getCategoricalSchemeRegistry().get();
-  return (scheme && scheme.colors) || [];
+  return scheme?.colors || [];
 }
 
 export function fallbackColors(count: number): string[] {

@@ -205,6 +205,28 @@ function maybeSanitize(html: string): string {
   }
 }
 
+type CompiledTemplate = ReturnType<typeof Handlebars.compile>;
+
+const compiledTemplates = new Map<string, CompiledTemplate>();
+
+/**
+ * Handlebars.compile parses the whole template and buildTooltipHtml runs
+ * on every tooltip render (each mousemove) — cache compiled templates by
+ * their source, bounded so user-edited templates do not accumulate.
+ */
+function compileTemplate(source: string): CompiledTemplate {
+  const cached = compiledTemplates.get(source);
+  if (cached) {
+    return cached;
+  }
+  if (compiledTemplates.size >= 32) {
+    compiledTemplates.clear();
+  }
+  const compiled = Handlebars.compile(source);
+  compiledTemplates.set(source, compiled);
+  return compiled;
+}
+
 export function buildTooltipHtml(
   template: string | undefined,
   input: FunnelTooltipInput,
@@ -215,7 +237,7 @@ export function buildTooltipHtml(
     ? template
     : buildDefaultTemplate(input, metricLabel);
   try {
-    const rendered = String(Handlebars.compile(effective)(data) ?? "");
+    const rendered = String(compileTemplate(effective)(data) ?? "");
     if (rendered.trim()) {
       return maybeSanitize(rendered);
     }
@@ -225,8 +247,7 @@ export function buildTooltipHtml(
   try {
     return maybeSanitize(
       String(
-        Handlebars.compile(buildDefaultTemplate(input, metricLabel))(data) ??
-          "",
+        compileTemplate(buildDefaultTemplate(input, metricLabel))(data) ?? "",
       ),
     );
   } catch {

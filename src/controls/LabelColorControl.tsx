@@ -18,9 +18,10 @@
  */
 import { t } from "@apache-superset/core/translation";
 import { useTheme } from "@apache-superset/core/theme";
-import { ColorPicker, type ColorValue } from "@superset-ui/core/components";
+import { ColorPicker } from "@superset-ui/core/components";
 import { ControlHeader } from "@superset-ui/chart-controls";
 import { getCategoricalSchemeRegistry } from "@superset-ui/core";
+import { colorToHex } from "./colorToHex";
 
 type Props = {
   value?: string | null;
@@ -31,15 +32,6 @@ type Props = {
   /** Palette of the rendered chart, provided via mapStateToProps */
   chartColors?: string[];
 };
-
-function toHex(color: ColorValue): string {
-  const rgb = color.toRgb();
-  const channel = (value: number) => {
-    const hex = Math.round(value).toString(16);
-    return hex.length === 1 ? `0${hex}` : hex;
-  };
-  return `#${channel(rgb.r)}${channel(rgb.g)}${channel(rgb.b)}`;
-}
 
 /**
  * Font color for bar labels. Empty (cleared) value = automatic contrast:
@@ -66,7 +58,7 @@ export default function LabelColorControl({
       <ColorPicker
         value={value || autoColor}
         allowClear
-        onChangeComplete={(color: ColorValue) => onChange?.(toHex(color))}
+        onChangeComplete={(color) => onChange?.(colorToHex(color))}
         onClear={() => onChange?.(null)}
         presets={[{ label: t("Chart colors"), colors: presetColors }]}
       />

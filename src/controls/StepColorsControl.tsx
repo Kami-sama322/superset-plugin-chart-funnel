@@ -22,6 +22,7 @@ import { useTheme } from "@apache-superset/core/theme";
 import { ColorPicker, type ColorValue } from "@superset-ui/core/components";
 import { ControlHeader } from "@superset-ui/chart-controls";
 import { getCategoricalSchemeRegistry } from "@superset-ui/core";
+import { colorToHex } from "./colorToHex";
 
 type Props = {
   value?: Record<string, string> | null;
@@ -37,15 +38,6 @@ type Props = {
   description?: string;
   name?: string;
 };
-
-function toHex(color: ColorValue): string {
-  const rgb = color.toRgb();
-  const channel = (value: number) => {
-    const hex = Math.round(value).toString(16);
-    return hex.length === 1 ? `0${hex}` : hex;
-  };
-  return `#${channel(rgb.r)}${channel(rgb.g)}${channel(rgb.b)}`;
-}
 
 export default function StepColorsControl({
   value,
@@ -109,9 +101,9 @@ export default function StepColorsControl({
             <ColorPicker
               value={colors[label] || fallback}
               onChangeComplete={(color: ColorValue) =>
-                emit({ ...colors, [label]: toHex(color) })
+                emit({ ...colors, [label]: colorToHex(color) })
               }
-              presets={[{ label: "Theme colors", colors: presetColors }]}
+              presets={[{ label: t("Chart colors"), colors: presetColors }]}
             />
           </div>
         ))}
