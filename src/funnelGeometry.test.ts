@@ -19,9 +19,49 @@
 import {
   buildSmoothBandPath,
   hermiteToBezier,
+  labelBoxForBand,
   monotoneTangents,
   splitCubicFirstPart,
 } from "./funnelGeometry";
+
+test("labelBoxForBand keeps the band width for constant-width bars", () => {
+  const box = labelBoxForBand({
+    centerX: 100,
+    topWidth: 80,
+    bottomWidth: 20,
+    slanted: false,
+  });
+  expect(box.width).toBe(80);
+  expect(box.left).toBe(60);
+});
+
+test("labelBoxForBand sizes slanted bands at their middle row", () => {
+  // funnel band narrowing down: top 300, bottom 100 -> mid width 200
+  const narrowing = labelBoxForBand({
+    centerX: 200,
+    topWidth: 300,
+    bottomWidth: 100,
+    slanted: true,
+  });
+  expect(narrowing.width).toBe(200);
+  expect(narrowing.left).toBe(100);
+  // widening down is symmetric
+  const widening = labelBoxForBand({
+    centerX: 200,
+    topWidth: 100,
+    bottomWidth: 300,
+    slanted: true,
+  });
+  expect(widening.width).toBe(200);
+  expect(widening.left).toBe(100);
+});
+
+test("labelBoxForBand defaults the bottom edge to the top width", () => {
+  // last band without a next step keeps its own width
+  const box = labelBoxForBand({ centerX: 50, topWidth: 40, slanted: true });
+  expect(box.width).toBe(40);
+  expect(box.left).toBe(30);
+});
 
 test("monotoneTangents recovers the slope for linear data", () => {
   const m = monotoneTangents([0, 10, 20, 30], [100, 80, 60, 40]);

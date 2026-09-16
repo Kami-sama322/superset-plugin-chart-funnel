@@ -39,7 +39,7 @@ import {
   toggleSelectedValue,
 } from "./crossFilter";
 import { isDarkColor } from "./funnelColors";
-import { buildSmoothBandPath, monotoneTangents } from "./funnelGeometry";
+import { buildSmoothBandPath, labelBoxForBand, monotoneTangents } from "./funnelGeometry";
 import {
   buildTooltipHtml,
   buildTooltipRows,
@@ -231,11 +231,6 @@ export default function Funnel(props: FunnelTransformedProps) {
       };
     }
     return { top: fromApexTop, bottom: fromApexBottom };
-  };
-  /** band width at its vertical middle — used for label placement */
-  const pyramidLabelWidth = (index: number) => {
-    const { top, bottom } = pyramidBandWidths(index);
-    return (top + bottom) / 2;
   };
 
   const smoothKnots =
@@ -437,12 +432,28 @@ export default function Funnel(props: FunnelTransformedProps) {
             })}
           </svg>
           {steps.map((step, index) => {
-            const bandLabelWidth = isPyramid
-              ? pyramidLabelWidth(index)
-              : barWidth(step);
-            const bandLabelLeft = isPyramid
-              ? centerX - bandLabelWidth / 2
-              : barLeft(step);
+            // The label is vertically centered in the band, so for slanted
+            // shapes (funnel, smooth funnel, pyramid) its box must match
+            // the band width at that middle row — sizing it by the top
+            // edge alone puts left/right aligned text outside the shape.
+            let topWidth: number;
+            let bottomWidth: number;
+            if (isPyramid) {
+              ({ top: topWidth, bottom: bottomWidth } =
+                pyramidBandWidths(index));
+            } else {
+              topWidth = barWidth(step);
+              bottomWidth = steps[index + 1]
+                ? barWidth(steps[index + 1])
+                : topWidth;
+            }
+            const { left: bandLabelLeft, width: bandLabelWidth } =
+              labelBoxForBand({
+                centerX,
+                topWidth,
+                bottomWidth,
+                slanted: shape !== "bars",
+              });
             const labelJustify =
               labelAlignment === "center"
                 ? "center"

@@ -101,6 +101,35 @@ export function splitCubicFirstPart(
   return [p01, p012, p0123];
 }
 
+export type LabelBox = {
+  /** left x of the label box */
+  left: number;
+  /** width of the label box */
+  width: number;
+};
+
+/**
+ * Box for a vertically centered band label. Slanted bands (funnel, smooth
+ * funnel, pyramid) are widest at one of their horizontal edges — sizing
+ * the box by the top edge alone pushes left/right aligned text outside
+ * the shape, so the box uses the band width at the label's middle row:
+ * the average of the top and bottom edge widths. Constant-width bands
+ * (bars) use the band width as is.
+ */
+export function labelBoxForBand(params: {
+  centerX: number;
+  /** width of the band's top edge (the band width itself for bars) */
+  topWidth: number;
+  /** width of the band's bottom edge; defaults to topWidth */
+  bottomWidth?: number;
+  /** true for slanted shapes (funnel, smooth funnel, pyramid) */
+  slanted: boolean;
+}): LabelBox {
+  const { centerX, topWidth, bottomWidth = topWidth, slanted } = params;
+  const width = slanted ? (topWidth + bottomWidth) / 2 : topWidth;
+  return { left: centerX - width / 2, width };
+}
+
 export type SmoothBandParams = {
   cx: number;
   /** band top y */
