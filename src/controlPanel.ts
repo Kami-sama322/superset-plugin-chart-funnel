@@ -32,8 +32,18 @@ import {
   sharedControls,
 } from "@superset-ui/chart-controls";
 import StepColorsControl from "./controls/StepColorsControl";
-import { orderStepsForRendering, toFiniteNumber } from "./funnelData";
-import { fallbackColors } from "./funnelColors";
+import LabelColorControl from "./controls/LabelColorControl";
+import {
+  normalizeSort,
+  orderStepsForRendering,
+  toFiniteNumber,
+} from "./funnelData";
+import {
+  fallbackColors,
+  parseColorToHex,
+  resolveStepColors,
+  schemePaletteColors,
+} from "./funnelColors";
 import {
   tooltipContentsControl,
   tooltipTemplateControl,
@@ -91,13 +101,14 @@ const orderedStepPairs = (
   chart?: ChartQueries,
 ): { label: string; value: number }[] => {
   const responses = chart?.queriesResponse || [];
-  const sort = state.form_data?.sort ?? "value_asc";
+  const sort = normalizeSort(state.form_data?.sort);
   const metricLabel = metricLabelOf(state);
   const dataMode =
     state.form_data?.data_mode === "fields" ? "fields" : "dimension";
 
   if (dataMode === "fields") {
-    const pairs = ensureIsArray(state.form_data?.fields)
+    // The field order IS the step order — no sorting in this mode
+    return ensureIsArray(state.form_data?.fields)
       .map(columnLabel)
       .filter((label: string) => Boolean(label))
       .map((label: string, index: number) => {
@@ -107,7 +118,6 @@ const orderedStepPairs = (
           value: toFiniteNumber(cellValue(row, metricLabel)),
         };
       });
-    return orderStepsForRendering(pairs, { sort });
   }
 
   const dimension = columnLabel(state.form_data?.groupby);
@@ -137,6 +147,43 @@ const orderedStepPairs = (
 
 const stepLabels = (state: ControlPanelState, chart?: ChartQueries): string[] =>
   orderedStepPairs(state, chart).map((pair) => pair.label);
+
+/**
+ * The palette the chart currently renders with, so the label color picker
+ * offers the same colors that are on the bars: the sequential scheme in
+ * the gradient mode, the resolved per-step colors in the custom mode.
+ */
+const chartPalette = (
+  state: ControlPanelState,
+  chart?: ChartQueries,
+): string[] => {
+  const colorMode =
+    state.form_data?.color_mode === "custom" ? "custom" : "gradient";
+  const scheme = state.form_data?.linear_color_scheme;
+  if (colorMode === "gradient" && !Array.isArray(scheme)) {
+    const palette = schemePaletteColors(
+      typeof scheme === "string" ? scheme : undefined,
+    );
+    if (palette.length > 0) {
+      return palette;
+    }
+  }
+  if (Array.isArray(scheme)) {
+    const palette = scheme
+      .map((color) => parseColorToHex(color))
+      .filter((color): color is string => color !== null);
+    if (palette.length > 0) {
+      return palette;
+    }
+  }
+  const colors = resolveStepColors({
+    colorMode,
+    scheme,
+    stepColors: state.form_data?.step_colors,
+    labels: stepLabels(state, chart),
+  });
+  return Array.from(new Set(colors));
+};
 
 const columnLabel = (col: unknown): string => {
   if (typeof col === "string") {
@@ -250,16 +297,15 @@ const config: ControlPanelConfig = {
               type: "SelectControl",
               label: t("Sort"),
               description: t(
-                "Step ordering — the same principle applies to every shape: the smallest value at the narrow end of the chart.",
+                "Order dimension values by the metric value: ascending puts the smallest value on top, descending flips the chart. Equal values are ordered by name in the same direction, so descending is the exact reverse of ascending. In the fields mode the order follows the field order.",
               ),
               renderTrigger: true,
               default: "value_asc",
               clearable: false,
+              visibility: inDimensionMode,
               options: [
-                { label: t("Value, ascending"), value: "value_asc" },
-                { label: t("Value, descending"), value: "value_desc" },
-                { label: t("Alphabetical, ascending"), value: "alpha_asc" },
-                { label: t("Alphabetical, descending"), value: "alpha_desc" },
+                { label: t("Ascending"), value: "value_asc" },
+                { label: t("Descending"), value: "value_desc" },
               ],
             },
           },
@@ -372,6 +418,48 @@ const config: ControlPanelConfig = {
                 { label: t("Center"), value: "center" },
                 { label: t("Right"), value: "right" },
               ],
+            },
+          },
+        ],
+        [
+          {
+            name: "label_color",
+            config: {
+              type: LabelColorControl,
+              label: t("Label color"),
+              description: t(
+                "Font color for bar labels. Clear the color to use the automatic contrast.",
+              ),
+              renderTrigger: true,
+              default: null,
+              visibility: ({ controls }: ControlPanelsContainerProps) =>
+                controls?.show_labels?.value !== false,
+              shouldMapStateToProps: () => true,
+              mapStateToProps: (
+                state: ControlPanelState,
+                _controlState: unknown,
+                chart?: ChartQueries,
+              ) => ({
+                // the picker offers the same palette the chart renders with
+                chartColors: chartPalette(state, chart),
+              }),
+            },
+          },
+        ],
+        [
+          {
+            name: "label_size",
+            config: {
+              type: "SliderControl",
+              label: t("Label font size"),
+              description: t("Label font size in pixels"),
+              renderTrigger: true,
+              min: 8,
+              max: 28,
+              step: 1,
+              default: 12,
+              visibility: ({ controls }: ControlPanelsContainerProps) =>
+                controls?.show_labels?.value !== false,
             },
           },
         ],

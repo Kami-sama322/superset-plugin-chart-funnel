@@ -123,6 +123,19 @@ export function gradientColors(
     .map((color) => parseColorToHex(color) || color);
 }
 
+/**
+ * Full color palette of a sequential color scheme — the palette the chart
+ * samples its step colors from in the gradient mode.
+ */
+export function schemePaletteColors(scheme: string | undefined): string[] {
+  const registry = getSequentialSchemeRegistry();
+  const resolved = scheme ? registry.get(scheme) : registry.get();
+  if (!resolved || resolved.colors.length === 0) {
+    return [];
+  }
+  return resolved.colors.map((color) => parseColorToHex(color) || color);
+}
+
 export function resolveStepColors(options: {
   colorMode: FunnelColorMode;
   scheme?: string | string[];

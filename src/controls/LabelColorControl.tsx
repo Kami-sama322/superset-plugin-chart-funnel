@@ -1,0 +1,75 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+import { t } from "@apache-superset/core/translation";
+import { useTheme } from "@apache-superset/core/theme";
+import { ColorPicker, type ColorValue } from "@superset-ui/core/components";
+import { ControlHeader } from "@superset-ui/chart-controls";
+import { getCategoricalSchemeRegistry } from "@superset-ui/core";
+
+type Props = {
+  value?: string | null;
+  onChange?: (value: string | null) => void;
+  label?: string;
+  description?: string;
+  name?: string;
+  /** Palette of the rendered chart, provided via mapStateToProps */
+  chartColors?: string[];
+};
+
+function toHex(color: ColorValue): string {
+  const rgb = color.toRgb();
+  const channel = (value: number) => {
+    const hex = Math.round(value).toString(16);
+    return hex.length === 1 ? `0${hex}` : hex;
+  };
+  return `#${channel(rgb.r)}${channel(rgb.g)}${channel(rgb.b)}`;
+}
+
+/**
+ * Font color for bar labels. Empty (cleared) value = automatic contrast:
+ * white on dark bars, theme text color on light ones. The preset palette
+ * mirrors the colors the chart is rendered with.
+ */
+export default function LabelColorControl({
+  value,
+  onChange,
+  chartColors,
+  ...headerProps
+}: Props) {
+  const theme = useTheme();
+  const chartPalette = Array.from(new Set(chartColors || [])).filter(Boolean);
+  const presetColors =
+    chartPalette.length > 0
+      ? chartPalette
+      : (getCategoricalSchemeRegistry().get()?.colors || []).slice(0, 9);
+  const autoColor = theme.colorText;
+
+  return (
+    <div>
+      <ControlHeader {...headerProps} />
+      <ColorPicker
+        value={value || autoColor}
+        allowClear
+        onChangeComplete={(color: ColorValue) => onChange?.(toHex(color))}
+        onClear={() => onChange?.(null)}
+        presets={[{ label: t("Chart colors"), colors: presetColors }]}
+      />
+    </div>
+  );
+}

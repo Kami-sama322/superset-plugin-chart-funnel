@@ -108,6 +108,8 @@ export default function Funnel(props: FunnelTransformedProps) {
     conversionColumnContent,
     conversionColumnPosition,
     labelAlignment,
+    labelColor,
+    labelFontSize,
     sort,
     showLabels,
     gap,
@@ -189,9 +191,8 @@ export default function Funnel(props: FunnelTransformedProps) {
   const isPyramid = shape === "pyramid";
   // DESC sorts mirror the pyramid geometry: the wide base sits on top and
   // the apex points down (the removed "inverted pyramid" shape lives on
-  // through the Sort control).
-  const pyramidMirrored =
-    isPyramid && (sort === "value_desc" || sort === "alpha_desc");
+  // through the Sort control in the dimension mode).
+  const pyramidMirrored = isPyramid && sort === "value_desc";
 
   // Layout model: request the layout from Bar height % (share of the full
   // height) + Gap, then scale the whole thing down uniformly when it does
@@ -463,8 +464,10 @@ export default function Funnel(props: FunnelTransformedProps) {
                       justifyContent: labelJustify,
                       padding: `0 ${PAD + 2}px`,
                       boxSizing: "border-box",
-                      color: isDarkColor(step.color) ? "#fff" : theme.colorText,
-                      fontSize: 12,
+                      color:
+                        labelColor ||
+                        (isDarkColor(step.color) ? "#fff" : theme.colorText),
+                      fontSize: labelFontSize,
                       fontWeight: 500,
                       fontVariantNumeric: "tabular-nums",
                       overflow: "hidden",
@@ -487,8 +490,10 @@ export default function Funnel(props: FunnelTransformedProps) {
                   <span
                     style={{
                       position: "absolute",
+                      // the left column sits in the band reserved between
+                      // PAD and contentLeft — outside the funnel area
                       ...(conversionOnLeft
-                        ? { left: contentLeft + 4 }
+                        ? { left: PAD + 4 }
                         : { right: PAD + 4 }),
                       top: stepTop(index),
                       height: barHeight,

@@ -27,7 +27,8 @@ import {
 import { DEFAULT_COUNT_METRIC, firstColumn } from "./buildQuery";
 import {
   buildFunnelSteps,
-  orderStepsForRendering,
+  normalizeSort,
+  orderStepsForDataMode,
   RawStep,
   toFiniteNumber,
   type WidthScale,
@@ -158,6 +159,15 @@ export default function transformProps(
     "label_alignment",
     "left",
   );
+  const labelColor = pick<string | undefined>(
+    fd,
+    "labelColor",
+    "label_color",
+    undefined,
+  );
+  const labelFontSize = toFiniteNumber(
+    pick<number>(fd, "labelSize", "label_size", 12),
+  );
   const showLabels = pick<boolean>(fd, "showLabels", "show_labels", true);
   const gap = toFiniteNumber(pick<number>(fd, "gap", "gap", 8));
   const barHeightPct = toFiniteNumber(
@@ -231,8 +241,10 @@ export default function transformProps(
     }
   }
 
-  const sort = fd.sort ?? "value_asc";
-  const sorted = orderStepsForRendering(rawSteps, { sort });
+  // ASC / DESC by metric value (ties break by name). The sort applies to
+  // the dimension mode only; the fields mode always renders in field order.
+  const sort = normalizeSort(fd.sort);
+  const sorted = orderStepsForDataMode(rawSteps, { dataMode, sort });
   // The process always reads top-to-bottom: the first step of the process
   // is whatever the Sort control put on top, so the percentage references
   // are direct for every shape and direction.
@@ -261,6 +273,8 @@ export default function transformProps(
     conversionColumnContent,
     conversionColumnPosition,
     labelAlignment,
+    labelColor,
+    labelFontSize,
     sort,
     showLabels,
     gap,

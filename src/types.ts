@@ -37,7 +37,10 @@ export type ConversionColumnPosition = "left" | "right";
 export type LabelAlignment = "left" | "center" | "right";
 export type WidthScale = "linear" | "sqrt" | "log";
 export type FunnelColorMode = "gradient" | "custom";
-export type SortMode = "value_desc" | "value_asc" | "alpha_asc" | "alpha_desc";
+/** alpha_* are legacy values from saved dashboards — normalizeSort maps them */
+export type SortMode = "value_asc" | "value_desc" | "alpha_asc" | "alpha_desc";
+/** Sorts offered by the Sort control (dimension mode only) */
+export type ValueSortMode = "value_asc" | "value_desc";
 export type LabelContentType =
   | "value"
   | "percent_first"
@@ -82,6 +85,10 @@ export type FunnelQueryFormData = QueryFormData & {
   conversionColumnPosition?: ConversionColumnPosition;
   label_alignment?: LabelAlignment;
   labelAlignment?: LabelAlignment;
+  label_color?: string;
+  labelColor?: string;
+  label_size?: number;
+  labelSize?: number;
   number_format?: string;
   numberFormat?: string;
   percent_format?: string;
@@ -112,6 +119,8 @@ export type FunnelTransformedProps = {
   conversionColumnContent: ConversionColumnContent;
   conversionColumnPosition: ConversionColumnPosition;
   labelAlignment: LabelAlignment;
+  labelColor?: string;
+  labelFontSize: number;
   sort: SortMode;
   showLabels: boolean;
   gap: number;
@@ -139,6 +148,8 @@ export const DEFAULT_FORM_DATA: Partial<FunnelQueryFormData> = {
   conversion_column_content: "percent_previous",
   conversion_column_position: "right",
   label_alignment: "left",
+  label_color: undefined,
+  label_size: 12,
   number_format: "SMART_NUMBER",
   percent_format: ".1%",
   gap: 8,

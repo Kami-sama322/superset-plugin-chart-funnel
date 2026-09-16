@@ -33,7 +33,10 @@
   spline — no sharp jumps) and *Pyramid* (triangle with equal-height slices,
   the smallest value at the apex)
 - **Sort control applies to every shape**: ASC keeps the smallest value at
-  the narrow end, DESC flips the pyramid (wide base on top)
+  the narrow end, DESC flips the pyramid (wide base on top). Sorting is by
+  the metric value with a name tie-break in the same direction (DESC is
+  the exact reverse of ASC); the fields mode always
+  follows the field order (no sort control)
 - **Bar height, %**: relative bar height — 50% is the automatic fit,
   lower makes bars thinner, higher denser; the gap physically separates
   bars and the chart always fits the screen
@@ -43,7 +46,7 @@
 - **Cross-filtering**: click a step to filter the dashboard — `IN` on the
   dimension value (dimension mode) or `IS NOT NULL` on the step column
   (fields mode); multi-select with toggle-off
-- Sorting (value / alphabetical, asc / desc) in the dimension mode
+- Sorting ASC / DESC by value (ties by name) in the dimension mode
 - Number and percent D3 formats, gap slider, labels toggle
 
 ---
@@ -121,7 +124,7 @@ Production image builds work the same way — see the sibling
 2. Choose the **Data mode**:
    - *Dimension values*: select a **Dimension** (e.g. sales stage) and a
      **Metric** (e.g. Opportunity count). Steps are ordered by the metric
-     (descending by default, sortable).
+     (ascending by default, ASC / DESC sort control).
    - *Fields as steps*: drag columns into **Step fields** in the order the
      funnel should follow. Each step value = metric aggregated over rows
      where that column is filled. The default metric is `COUNT(*)`.
