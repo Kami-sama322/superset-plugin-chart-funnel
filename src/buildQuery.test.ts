@@ -39,7 +39,7 @@ test("firstColumn unwraps nested arrays and empties", () => {
   expect(firstColumn(undefined)).toBeUndefined();
 });
 
-test("dimension mode builds one grouped query ordered by metric desc", () => {
+test("dimension mode builds one grouped query ordered by metric asc by default", () => {
   const context = buildQuery(
     formData({ data_mode: "dimension", groupby: "stage", metric: "count" }),
   );
@@ -47,11 +47,11 @@ test("dimension mode builds one grouped query ordered by metric desc", () => {
   const query = context.queries[0];
   expect(query.columns).toEqual(["stage"]);
   expect(query.metrics).toEqual(["count"]);
-  expect(query.orderby).toEqual([["count", false]]);
+  expect(query.orderby).toEqual([["count", true]]);
   expect(query.is_timeseries).toBe(false);
 });
 
-test("dimension mode supports ascending and alphabetical sorting", () => {
+test("dimension mode sorts by value; legacy alphabetical sorts are normalized", () => {
   const base = {
     data_mode: "dimension" as const,
     groupby: "stage",
@@ -61,11 +61,14 @@ test("dimension mode supports ascending and alphabetical sorting", () => {
     buildQuery(formData({ ...base, sort: "value_asc" })).queries[0].orderby,
   ).toEqual([["count", true]]);
   expect(
+    buildQuery(formData({ ...base, sort: "value_desc" })).queries[0].orderby,
+  ).toEqual([["count", false]]);
+  expect(
     buildQuery(formData({ ...base, sort: "alpha_asc" })).queries[0].orderby,
-  ).toEqual([["stage", true]]);
+  ).toEqual([["count", true]]);
   expect(
     buildQuery(formData({ ...base, sort: "alpha_desc" })).queries[0].orderby,
-  ).toEqual([["stage", false]]);
+  ).toEqual([["count", false]]);
 });
 
 test("dimension mode falls back to COUNT(*) when metric is missing", () => {
@@ -74,7 +77,7 @@ test("dimension mode falls back to COUNT(*) when metric is missing", () => {
   );
   const query = context.queries[0];
   expect(query.metrics).toEqual([DEFAULT_COUNT_METRIC]);
-  expect(query.orderby).toEqual([["COUNT(*)", false]]);
+  expect(query.orderby).toEqual([["COUNT(*)", true]]);
 });
 
 test("dimension mode throws without a dimension column", () => {

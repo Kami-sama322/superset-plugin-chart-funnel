@@ -25,7 +25,8 @@ import {
   QueryFormMetric,
   QueryObject,
 } from "@superset-ui/core";
-import { DataMode, FunnelQueryFormData, SortMode } from "./types";
+import { normalizeSort } from "./funnelData";
+import { DataMode, FunnelQueryFormData, ValueSortMode } from "./types";
 
 export const DEFAULT_COUNT_METRIC: QueryFormMetric = {
   expressionType: "SQL",
@@ -54,22 +55,16 @@ export function resolveMetric(formData: FunnelQueryFormData): QueryFormMetric {
   return formData.metric ?? DEFAULT_COUNT_METRIC;
 }
 
+/**
+ * Query-level ordering matches the render sort: by the metric value,
+ * ascending or descending (the client re-sorts with an alphabetical
+ * tie-break). The tuple flag is `ascending` (true = ASC).
+ */
 function buildOrderBy(
-  sort: SortMode,
-  dimensionLabel: string,
+  sort: ValueSortMode,
   metricLabel: string,
 ): [string, boolean][] {
-  switch (sort) {
-    case "value_asc":
-      return [[metricLabel, true]];
-    case "alpha_asc":
-      return [[dimensionLabel, true]];
-    case "alpha_desc":
-      return [[dimensionLabel, false]];
-    case "value_desc":
-    default:
-      return [[metricLabel, false]];
-  }
+  return [[metricLabel, sort === "value_asc"]];
 }
 
 export default function buildQuery(formData: FunnelQueryFormData) {
@@ -107,7 +102,7 @@ export default function buildQuery(formData: FunnelQueryFormData) {
   if (!dimension) {
     throw new Error("Dimension column is required");
   }
-  const sort = formData.sort ?? "value_desc";
+  const sort = normalizeSort(formData.sort);
 
   return buildQueryContext(formData, {
     queryFields: {
@@ -118,11 +113,7 @@ export default function buildQuery(formData: FunnelQueryFormData) {
         ...baseQueryObject,
         columns: [dimension],
         metrics: [metric],
-        orderby: buildOrderBy(
-          sort,
-          getColumnLabel(dimension),
-          getMetricLabel(metric),
-        ),
+        orderby: buildOrderBy(sort, getMetricLabel(metric)),
         is_timeseries: false,
       },
     ],

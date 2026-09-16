@@ -17,7 +17,7 @@
  * under the License.
  */
 import { DataRecordValue } from "@superset-ui/core";
-import { SortMode } from "./types";
+import { DataMode, SortMode, ValueSortMode } from "./types";
 
 export type RawStep = {
   label: string;
@@ -54,8 +54,9 @@ function compareLabels(a: string, b: string): number {
 export function sortRawSteps(steps: RawStep[], sort: SortMode): RawStep[] {
   const sorted = [...steps];
   switch (sort) {
-    // ties break alphabetically by label so the order is deterministic
-    // across shapes and query runs
+    // ties break by label in the SAME direction as the value sort, so DESC
+    // is the exact reverse of ASC and the apex keeps the same step in both
+    // directions
     case "value_asc":
       return sorted.sort(
         (a, b) => a.value - b.value || compareLabels(a.label, b.label),
@@ -67,18 +68,44 @@ export function sortRawSteps(steps: RawStep[], sort: SortMode): RawStep[] {
     case "value_desc":
     default:
       return sorted.sort(
-        (a, b) => b.value - a.value || compareLabels(a.label, b.label),
+        (a, b) => b.value - a.value || compareLabels(b.label, a.label),
       );
   }
 }
 
 /**
+ * The Sort control offers ASC / DESC by metric value (ties break by name).
+ * `alpha_*` are legacy values from saved dashboards — they map onto the
+ * corresponding value sorts, anything unknown falls back to ASC.
+ */
+export function normalizeSort(sort: unknown): ValueSortMode {
+  if (sort === "value_desc" || sort === "alpha_desc") {
+    return "value_desc";
+  }
+  return "value_asc";
+}
+
+/**
  * Final step order before the geometric layout — the exact top-to-bottom
- * render order. ONE principle for every shape and data mode: the Sort
- * control applies the same way everywhere (ascending by value by default,
- * ties alphabetical), so the same dataset renders in the same sequence
- * regardless of the shape. For the pyramid, DESC mirrors the geometry
- * (base at the top, apex at the bottom).
+ * render order. Dimension mode applies the Sort control: ascending by
+ * value by default, ties alphabetical, so the same dataset renders in the
+ * same sequence regardless of the shape (for the pyramid, DESC mirrors the
+ * geometry — base at the top, apex at the bottom). Fields mode never
+ * re-orders: the step order is the field order.
+ */
+export function orderStepsForDataMode(
+  steps: RawStep[],
+  options: { dataMode: DataMode; sort: SortMode },
+): RawStep[] {
+  if (options.dataMode === "fields") {
+    return [...steps];
+  }
+  return sortRawSteps(steps, normalizeSort(options.sort));
+}
+
+/**
+ * Dimension-mode render order: applies the (normalized) Sort control.
+ * Used by the control panel to keep lists in sync with the chart.
  */
 export function orderStepsForRendering(
   steps: RawStep[],
@@ -86,7 +113,7 @@ export function orderStepsForRendering(
     sort: SortMode;
   },
 ): RawStep[] {
-  return sortRawSteps(steps, options.sort);
+  return sortRawSteps(steps, normalizeSort(options.sort));
 }
 
 export type WidthScale = "linear" | "sqrt" | "log";

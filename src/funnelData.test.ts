@@ -18,6 +18,8 @@
  */
 import {
   buildFunnelSteps,
+  normalizeSort,
+  orderStepsForDataMode,
   orderStepsForRendering,
   RawStep,
   sortRawSteps,
@@ -210,34 +212,73 @@ const orderSteps: RawStep[] = [
   { label: "small", value: 10 },
 ];
 
-test("sortRawSteps breaks value ties alphabetically and deterministically", () => {
+test("sortRawSteps breaks value ties by name in the sort direction", () => {
   const tied: RawStep[] = [
     { label: "global_search", value: 1 },
     { label: "commits", value: 1 },
   ];
-  // ascending and descending agree on tie order -> pyramid and inverted
-  // render the same sequence
+  // ascending: alphabetical; descending: reverse alphabetical, so DESC is
+  // the exact reverse of ASC and the apex keeps the same step
   expect(sortRawSteps(tied, "value_asc").map((s) => s.label)).toEqual([
     "commits",
     "global_search",
   ]);
   expect(sortRawSteps(tied, "value_desc").map((s) => s.label)).toEqual([
-    "commits",
     "global_search",
+    "commits",
   ]);
   // independent of the input order
-  const flipped: RawStep[] = [tied[1], tied[0]];
+  const flipped: RawStep[] = [tied[0], tied[1]];
   expect(sortRawSteps(flipped, "value_asc").map((s) => s.label)).toEqual([
     "commits",
     "global_search",
   ]);
   expect(sortRawSteps(flipped, "value_desc").map((s) => s.label)).toEqual([
-    "commits",
     "global_search",
+    "commits",
   ]);
 });
 
-test("orderStepsForRendering applies the sort control in fields mode too", () => {
+test("normalizeSort keeps value sorts and maps legacy alphabetical sorts", () => {
+  expect(normalizeSort("value_asc")).toBe("value_asc");
+  expect(normalizeSort("value_desc")).toBe("value_desc");
+  expect(normalizeSort("alpha_asc")).toBe("value_asc");
+  expect(normalizeSort("alpha_desc")).toBe("value_desc");
+  expect(normalizeSort(undefined)).toBe("value_asc");
+  expect(normalizeSort("garbage")).toBe("value_asc");
+});
+
+test("orderStepsForDataMode keeps the field order in fields mode", () => {
+  const result = orderStepsForDataMode(
+    [
+      { label: "b", value: 1 },
+      { label: "a", value: 9 },
+    ],
+    { dataMode: "fields", sort: "value_asc" },
+  );
+  expect(result.map((s) => s.label)).toEqual(["b", "a"]);
+});
+
+test("orderStepsForDataMode applies the sort control in dimension mode", () => {
+  const steps: RawStep[] = [
+    { label: "b", value: 1 },
+    { label: "a", value: 9 },
+  ];
+  expect(
+    orderStepsForDataMode(steps, {
+      dataMode: "dimension",
+      sort: "value_asc",
+    }).map((s) => s.label),
+  ).toEqual(["b", "a"]);
+  expect(
+    orderStepsForDataMode(steps, {
+      dataMode: "dimension",
+      sort: "alpha_desc",
+    }).map((s) => s.label),
+  ).toEqual(["a", "b"]);
+});
+
+test("orderStepsForRendering sorts by value ascending", () => {
   const result = orderStepsForRendering(
     [
       { label: "b", value: 1 },
@@ -248,7 +289,7 @@ test("orderStepsForRendering applies the sort control in fields mode too", () =>
   expect(result.map((s) => s.label)).toEqual(["b", "a"]);
 });
 
-test("orderStepsForRendering puts the smallest value at the pyramid apex in fields mode too", () => {
+test("orderStepsForRendering puts the smallest value at the pyramid apex", () => {
   const result = orderStepsForRendering(
     [
       { label: "big", value: 9 },
@@ -277,14 +318,14 @@ test("orderStepsForRendering applies the same sort to the funnel family", () => 
   expect(bars.map((s) => s.label)).toEqual(["big", "mid", "small"]);
 });
 
-test("orderStepsForRendering breaks value ties alphabetically", () => {
+test("orderStepsForRendering breaks value ties by name following the direction", () => {
   const tied: RawStep[] = [
     { label: "commits", value: 1 },
     { label: "global_search", value: 1 },
   ];
   const options = { sort: "value_desc" as const };
   const result = orderStepsForRendering(tied, options);
-  expect(result.map((s) => s.label)).toEqual(["commits", "global_search"]);
+  expect(result.map((s) => s.label)).toEqual(["global_search", "commits"]);
 });
 
 test("orderStepsForRendering follows the sort control for other shapes", () => {
