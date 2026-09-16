@@ -108,6 +108,7 @@ export default function Funnel(props: FunnelTransformedProps) {
     conversionColumnContent,
     conversionColumnPosition,
     labelAlignment,
+    sort,
     showLabels,
     gap,
     barHeightPct,
@@ -185,8 +186,12 @@ export default function Funnel(props: FunnelTransformedProps) {
   const innerWidth = Math.max(10, width - PAD * 2 - conversionWidth);
   const innerHeight = Math.max(10, chartHeight - PAD * 2);
 
-  const isPyramid = shape === "pyramid" || shape === "pyramid_inverted";
-  const isInvertedPyramid = shape === "pyramid_inverted";
+  const isPyramid = shape === "pyramid";
+  // DESC sorts mirror the pyramid geometry: the wide base sits on top and
+  // the apex points down (the removed "inverted pyramid" shape lives on
+  // through the Sort control).
+  const pyramidMirrored =
+    isPyramid && (sort === "value_desc" || sort === "alpha_desc");
 
   // Layout model: request the layout from Bar height % (share of the full
   // height) + Gap, then scale the whole thing down uniformly when it does
@@ -218,7 +223,7 @@ export default function Funnel(props: FunnelTransformedProps) {
   const pyramidBandWidths = (index: number) => {
     const fromApexTop = (index / stepCount) * innerWidth;
     const fromApexBottom = ((index + 1) / stepCount) * innerWidth;
-    if (isInvertedPyramid) {
+    if (pyramidMirrored) {
       return {
         top: innerWidth - fromApexTop,
         bottom: innerWidth - fromApexBottom,

@@ -17,7 +17,7 @@
  * under the License.
  */
 import { DataRecordValue } from "@superset-ui/core";
-import { DataMode, FunnelShape, SortMode } from "./types";
+import { SortMode } from "./types";
 
 export type RawStep = {
   label: string;
@@ -74,33 +74,19 @@ export function sortRawSteps(steps: RawStep[], sort: SortMode): RawStep[] {
 
 /**
  * Final step order before the geometric layout — the exact top-to-bottom
- * render order. Pyramid and inverted pyramid share the same stage order
- * (smallest at the apex, ties alphabetical), the inverted one is just
- * rendered mirrored, so the apex stage is the same in both shapes.
- * Fields mode keeps the insertion order for the other shapes
- * (step order = field order). Dimension mode follows the sort control.
+ * render order. ONE principle for every shape and data mode: the Sort
+ * control applies the same way everywhere (ascending by value by default,
+ * ties alphabetical), so the same dataset renders in the same sequence
+ * regardless of the shape. For the pyramid, DESC mirrors the geometry
+ * (base at the top, apex at the bottom).
  */
 export function orderStepsForRendering(
   steps: RawStep[],
   options: {
-    shape: FunnelShape;
-    dataMode: DataMode;
     sort: SortMode;
   },
 ): RawStep[] {
-  const { shape, dataMode, sort } = options;
-  if (shape === "pyramid") {
-    return sortRawSteps(steps, "value_asc");
-  }
-  if (shape === "pyramid_inverted") {
-    // mirrored render of the regular pyramid: same apex stage
-    const ascending = sortRawSteps(steps, "value_asc");
-    return ascending.reverse();
-  }
-  if (dataMode === "fields") {
-    return steps;
-  }
-  return sortRawSteps(steps, sort);
+  return sortRawSteps(steps, options.sort);
 }
 
 export type WidthScale = "linear" | "sqrt" | "log";

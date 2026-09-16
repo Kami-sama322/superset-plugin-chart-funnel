@@ -73,21 +73,7 @@ export default function StepColorsControl({
   const rows = stepNames.map((label, index) => ({
     label,
     fallback: defaultColors[index] || presetColors[0] || "#1fa8c9",
-    removable: false,
   }));
-  // Stale entries: colors set for steps that are no longer rendered
-  Object.keys(colors)
-    .filter((label) => !stepNames.includes(label))
-    .forEach((label, index) =>
-      rows.push({
-        label,
-        fallback:
-          defaultColors[stepNames.length + index] ||
-          presetColors[0] ||
-          "#1fa8c9",
-        removable: true,
-      }),
-    );
 
   return (
     <div>
@@ -99,7 +85,7 @@ export default function StepColorsControl({
           gap: theme.sizeUnit / 2,
         }}
       >
-        {rows.map(({ label, fallback, removable }) => (
+        {rows.map(({ label, fallback }) => (
           <div
             key={label}
             style={{
@@ -107,17 +93,6 @@ export default function StepColorsControl({
               alignItems: "center",
               gap: theme.sizeUnit,
               minHeight: 28,
-              padding: `0 ${theme.sizeUnit / 2}px`,
-              margin: `0 -${theme.sizeUnit / 2}px`,
-              borderRadius: theme.borderRadius,
-              transition: "background-color 120ms ease-out",
-            }}
-            onMouseEnter={(event) => {
-              event.currentTarget.style.backgroundColor =
-                theme.colorFillQuaternary;
-            }}
-            onMouseLeave={(event) => {
-              event.currentTarget.style.backgroundColor = "transparent";
             }}
           >
             <span
@@ -138,41 +113,6 @@ export default function StepColorsControl({
               }
               presets={[{ label: "Theme colors", colors: presetColors }]}
             />
-            {removable ? (
-              <button
-                type="button"
-                onClick={() => {
-                  const next = { ...colors };
-                  delete next[label];
-                  emit(next);
-                }}
-                style={{
-                  border: "none",
-                  background: "transparent",
-                  cursor: "pointer",
-                  color: theme.colorTextSecondary,
-                  fontSize: 14,
-                  lineHeight: 1,
-                  width: 24,
-                  height: 24,
-                  borderRadius: theme.borderRadius,
-                  transition:
-                    "color 120ms ease-out, background-color 120ms ease-out",
-                }}
-                onMouseEnter={(event) => {
-                  event.currentTarget.style.color = theme.colorError;
-                  event.currentTarget.style.backgroundColor =
-                    theme.colorFillQuaternary;
-                }}
-                onMouseLeave={(event) => {
-                  event.currentTarget.style.color = theme.colorTextSecondary;
-                  event.currentTarget.style.backgroundColor = "transparent";
-                }}
-                title={t("Remove color")}
-              >
-                ✕
-              </button>
-            ) : null}
           </div>
         ))}
         {rows.length === 0 ? (

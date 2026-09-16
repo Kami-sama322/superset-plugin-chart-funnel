@@ -231,19 +231,12 @@ export default function transformProps(
     }
   }
 
-  const sorted = orderStepsForRendering(rawSteps, {
-    shape,
-    dataMode,
-    sort: fd.sort ?? "value_desc",
-  });
-  // The pyramid's process starts at the base (the widest, largest band):
-  // its array is ascending, so the "first"/"previous" references are
-  // reversed. The inverted pyramid renders the same order mirrored
-  // (base first), so its references are direct.
-  const base = buildFunnelSteps(sorted, {
-    reverseReference: shape === "pyramid",
-    widthScale,
-  });
+  const sort = fd.sort ?? "value_asc";
+  const sorted = orderStepsForRendering(rawSteps, { sort });
+  // The process always reads top-to-bottom: the first step of the process
+  // is whatever the Sort control put on top, so the percentage references
+  // are direct for every shape and direction.
+  const base = buildFunnelSteps(sorted, { widthScale });
 
   const colors = resolveStepColors({
     colorMode,
@@ -268,6 +261,7 @@ export default function transformProps(
     conversionColumnContent,
     conversionColumnPosition,
     labelAlignment,
+    sort,
     showLabels,
     gap,
     barHeightPct,

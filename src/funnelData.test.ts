@@ -237,13 +237,13 @@ test("sortRawSteps breaks value ties alphabetically and deterministically", () =
   ]);
 });
 
-test("orderStepsForRendering keeps insertion order in fields mode for regular shapes", () => {
+test("orderStepsForRendering applies the sort control in fields mode too", () => {
   const result = orderStepsForRendering(
     [
       { label: "b", value: 1 },
       { label: "a", value: 9 },
     ],
-    { shape: "bars", dataMode: "fields", sort: "value_desc" },
+    { sort: "value_asc" },
   );
   expect(result.map((s) => s.label)).toEqual(["b", "a"]);
 });
@@ -254,72 +254,45 @@ test("orderStepsForRendering puts the smallest value at the pyramid apex in fiel
       { label: "big", value: 9 },
       { label: "small", value: 1 },
     ],
-    { shape: "pyramid", dataMode: "fields", sort: "value_desc" },
+    { sort: "value_asc" },
   );
   expect(result.map((s) => s.label)).toEqual(["small", "big"]);
-  const inverted = orderStepsForRendering(
-    [
-      { label: "big", value: 9 },
-      { label: "small", value: 1 },
-    ],
-    { shape: "pyramid_inverted", dataMode: "fields", sort: "value_asc" },
-  );
-  expect(inverted.map((s) => s.label)).toEqual(["big", "small"]);
 });
 
 test("orderStepsForRendering puts the smallest value at the pyramid apex", () => {
   const result = orderStepsForRendering(orderSteps, {
-    shape: "pyramid",
-    dataMode: "dimension",
-    sort: "value_desc",
+    sort: "value_asc",
   });
   expect(result.map((s) => s.label)).toEqual(["small", "mid", "big"]);
 });
 
-test("orderStepsForRendering keeps the same apex stage in both pyramids for ties", () => {
+test("orderStepsForRendering applies the same sort to the funnel family", () => {
+  const funnel = orderStepsForRendering(orderSteps, {
+    sort: "value_asc",
+  });
+  expect(funnel.map((s) => s.label)).toEqual(["small", "mid", "big"]);
+  const bars = orderStepsForRendering(orderSteps, {
+    sort: "value_desc",
+  });
+  expect(bars.map((s) => s.label)).toEqual(["big", "mid", "small"]);
+});
+
+test("orderStepsForRendering breaks value ties alphabetically", () => {
   const tied: RawStep[] = [
     { label: "commits", value: 1 },
     { label: "global_search", value: 1 },
   ];
-  const options = {
-    dataMode: "dimension" as const,
-    sort: "value_desc" as const,
-  };
-  const pyramid = orderStepsForRendering(tied, {
-    shape: "pyramid",
-    ...options,
-  });
-  const inverted = orderStepsForRendering(tied, {
-    shape: "pyramid_inverted",
-    ...options,
-  });
-  // pyramid renders apex (top) first; inverted renders apex (bottom) last
-  expect(pyramid[0].label).toBe("commits");
-  expect(inverted[inverted.length - 1].label).toBe("commits");
-  // and the base stage matches too
-  expect(pyramid[pyramid.length - 1].label).toBe("global_search");
-  expect(inverted[0].label).toBe("global_search");
-});
-
-test("orderStepsForRendering puts the largest value at the inverted pyramid top", () => {
-  const result = orderStepsForRendering(orderSteps, {
-    shape: "pyramid_inverted",
-    dataMode: "dimension",
-    sort: "value_asc",
-  });
-  expect(result.map((s) => s.label)).toEqual(["big", "mid", "small"]);
+  const options = { sort: "value_desc" as const };
+  const result = orderStepsForRendering(tied, options);
+  expect(result.map((s) => s.label)).toEqual(["commits", "global_search"]);
 });
 
 test("orderStepsForRendering follows the sort control for other shapes", () => {
   const asc = orderStepsForRendering(orderSteps, {
-    shape: "funnel",
-    dataMode: "dimension",
     sort: "value_asc",
   });
   expect(asc.map((s) => s.label)).toEqual(["small", "mid", "big"]);
   const desc = orderStepsForRendering(orderSteps, {
-    shape: "bars",
-    dataMode: "dimension",
     sort: "value_desc",
   });
   expect(desc.map((s) => s.label)).toEqual(["big", "mid", "small"]);

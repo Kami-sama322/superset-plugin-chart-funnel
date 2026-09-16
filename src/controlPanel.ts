@@ -58,11 +58,6 @@ const inGradientMode = ({ controls }: ControlPanelsContainerProps) =>
 const inCustomMode = ({ controls }: ControlPanelsContainerProps) =>
   controls?.color_mode?.value === "custom";
 
-const isPyramidShape = ({ controls }: ControlPanelsContainerProps) => {
-  const shape = controls?.shape?.value;
-  return shape === "pyramid" || shape === "pyramid_inverted";
-};
-
 const isGroupableColumn = (column: unknown) =>
   (column as { groupby?: boolean } | null)?.groupby !== false;
 
@@ -96,16 +91,10 @@ const orderedStepPairs = (
   chart?: ChartQueries,
 ): { label: string; value: number }[] => {
   const responses = chart?.queriesResponse || [];
+  const sort = state.form_data?.sort ?? "value_asc";
+  const metricLabel = metricLabelOf(state);
   const dataMode =
     state.form_data?.data_mode === "fields" ? "fields" : "dimension";
-  const shape = (state.form_data?.shape ?? "bars") as
-    | "bars"
-    | "funnel"
-    | "funnel_smooth"
-    | "pyramid"
-    | "pyramid_inverted";
-  const sort = state.form_data?.sort ?? "value_desc";
-  const metricLabel = metricLabelOf(state);
 
   if (dataMode === "fields") {
     const pairs = ensureIsArray(state.form_data?.fields)
@@ -118,7 +107,7 @@ const orderedStepPairs = (
           value: toFiniteNumber(cellValue(row, metricLabel)),
         };
       });
-    return orderStepsForRendering(pairs, { shape, dataMode, sort });
+    return orderStepsForRendering(pairs, { sort });
   }
 
   const dimension = columnLabel(state.form_data?.groupby);
@@ -143,7 +132,7 @@ const orderedStepPairs = (
       value: toFiniteNumber(cellValue(row, metricLabel)),
     });
   });
-  return orderStepsForRendering(pairs, { shape, dataMode, sort });
+  return orderStepsForRendering(pairs, { sort });
 };
 
 const stepLabels = (state: ControlPanelState, chart?: ChartQueries): string[] =>
@@ -260,15 +249,15 @@ const config: ControlPanelConfig = {
             config: {
               type: "SelectControl",
               label: t("Sort"),
-              description: t("Step ordering. Ignored for pyramid shapes."),
+              description: t(
+                "Step ordering — the same principle applies to every shape: the smallest value at the narrow end of the chart.",
+              ),
               renderTrigger: true,
-              default: "value_desc",
+              default: "value_asc",
               clearable: false,
-              visibility: (props: ControlPanelsContainerProps) =>
-                inDimensionMode(props) && !isPyramidShape(props),
               options: [
-                { label: t("Value, descending"), value: "value_desc" },
                 { label: t("Value, ascending"), value: "value_asc" },
+                { label: t("Value, descending"), value: "value_desc" },
                 { label: t("Alphabetical, ascending"), value: "alpha_asc" },
                 { label: t("Alphabetical, descending"), value: "alpha_desc" },
               ],
@@ -297,7 +286,6 @@ const config: ControlPanelConfig = {
                 ["funnel", t("Funnel")],
                 ["funnel_smooth", t("Funnel (smooth)")],
                 ["pyramid", t("Pyramid")],
-                ["pyramid_inverted", t("Pyramid (inverted)")],
               ],
             },
           },

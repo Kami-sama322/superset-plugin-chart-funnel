@@ -30,9 +30,10 @@
 - **Two shapes**: *Rectangles* (separated centered bars, Power BI look) and
   *Funnel* (continuous trapezoids)
 - **Two extra shapes**: *Smooth funnel* (curved transitions, monotone cubic
-  spline — no sharp jumps), *Pyramid* (triangle with equal-height slices, the
-  smallest value at the apex) and *Inverted pyramid* (the largest value at
-  the top base)
+  spline — no sharp jumps) and *Pyramid* (triangle with equal-height slices,
+  the smallest value at the apex)
+- **Sort control applies to every shape**: ASC keeps the smallest value at
+  the narrow end, DESC flips the pyramid (wide base on top)
 - **Bar height, %**: relative bar height — 50% is the automatic fit,
   lower makes bars thinner, higher denser; the gap physically separates
   bars and the chart always fits the screen
@@ -155,7 +156,7 @@ Columns selected in **Tooltip contents** are available by their names
 
 | Control | Description |
 |---------|-------------|
-| Shape | Rectangles (Power BI) / Funnel / Smooth funnel / Pyramid / Inverted pyramid |
+| Shape | Rectangles (Power BI) / Funnel / Smooth funnel / Pyramid |
 | Color mode | Gradient / Custom per-step colors |
 | Gradient color scheme | Sequential scheme (gradient mode) |
 | Step colors | Ready-made per-step picker list (populated from the query result / step fields); unset steps fall back to the categorical scheme |

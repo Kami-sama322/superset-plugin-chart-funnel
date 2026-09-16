@@ -27,12 +27,7 @@ import {
 } from "@superset-ui/core";
 
 export type DataMode = "dimension" | "fields";
-export type FunnelShape =
-  | "bars"
-  | "funnel"
-  | "funnel_smooth"
-  | "pyramid"
-  | "pyramid_inverted";
+export type FunnelShape = "bars" | "funnel" | "funnel_smooth" | "pyramid";
 export type ConversionColumnContent =
   | "none"
   | "value"
@@ -117,6 +112,7 @@ export type FunnelTransformedProps = {
   conversionColumnContent: ConversionColumnContent;
   conversionColumnPosition: ConversionColumnPosition;
   labelAlignment: LabelAlignment;
+  sort: SortMode;
   showLabels: boolean;
   gap: number;
   barHeightPct: number;
@@ -136,7 +132,7 @@ export type FunnelTransformedProps = {
 
 export const DEFAULT_FORM_DATA: Partial<FunnelQueryFormData> = {
   data_mode: "dimension",
-  sort: "value_desc",
+  sort: "value_asc",
   shape: "bars",
   color_mode: "gradient",
   label_content_type: "value",
