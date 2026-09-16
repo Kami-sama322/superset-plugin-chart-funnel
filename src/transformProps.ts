@@ -166,8 +166,11 @@ export default function transformProps(
     "label_color",
     undefined,
   );
-  const labelFontSize = toFiniteNumber(
-    pick<number>(fd, "labelSize", "label_size", 12),
+  // the slider is 8..28, but API-authored form data can hold anything —
+  // guard against invisible (0) labels
+  const labelFontSize = Math.max(
+    8,
+    toFiniteNumber(pick<number>(fd, "labelSize", "label_size", 12)),
   );
   const showLabels = pick<boolean>(fd, "showLabels", "show_labels", true);
   const gap = toFiniteNumber(pick<number>(fd, "gap", "gap", 8));

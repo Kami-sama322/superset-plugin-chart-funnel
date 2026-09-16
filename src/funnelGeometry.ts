@@ -130,6 +130,27 @@ export function labelBoxForBand(params: {
   return { left: centerX - width / 2, width };
 }
 
+/**
+ * Width of a smooth band's bottom edge. The knot spline spans
+ * (height + gap) vertically between band tops, but the band itself only
+ * (height) — its bottom edge sits part-way along the segment. Linear in
+ * the knot widths: exact for straight edges, a close estimate for the
+ * monotone cubic ones (the limiter keeps the curve near the chord).
+ */
+export function smoothBandBottomWidth(params: {
+  topWidth: number;
+  nextWidth: number;
+  height: number;
+  gap: number;
+}): number {
+  const span = params.height + params.gap;
+  if (span <= 0) {
+    return params.nextWidth;
+  }
+  const t = Math.min(1, params.height / span);
+  return params.topWidth + (params.nextWidth - params.topWidth) * t;
+}
+
 export type SmoothBandParams = {
   cx: number;
   /** band top y */

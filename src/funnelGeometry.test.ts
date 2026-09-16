@@ -21,8 +21,34 @@ import {
   hermiteToBezier,
   labelBoxForBand,
   monotoneTangents,
+  smoothBandBottomWidth,
   splitCubicFirstPart,
 } from "./funnelGeometry";
+
+test("smoothBandBottomWidth interpolates within the band span", () => {
+  // no gap: the band bottom reaches the next knot
+  expect(
+    smoothBandBottomWidth({
+      topWidth: 100,
+      nextWidth: 300,
+      height: 40,
+      gap: 0,
+    }),
+  ).toBe(300);
+  // gap equals height: the band bottom is half-way along the spline span
+  expect(
+    smoothBandBottomWidth({
+      topWidth: 100,
+      nextWidth: 300,
+      height: 40,
+      gap: 40,
+    }),
+  ).toBe(200);
+  // degenerate span falls back to the next knot
+  expect(
+    smoothBandBottomWidth({ topWidth: 100, nextWidth: 300, height: 0, gap: 0 }),
+  ).toBe(300);
+});
 
 test("labelBoxForBand keeps the band width for constant-width bars", () => {
   const box = labelBoxForBand({

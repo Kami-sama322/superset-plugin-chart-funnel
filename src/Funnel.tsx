@@ -39,7 +39,12 @@ import {
   toggleSelectedValue,
 } from "./crossFilter";
 import { isDarkColor } from "./funnelColors";
-import { buildSmoothBandPath, labelBoxForBand, monotoneTangents } from "./funnelGeometry";
+import {
+  buildSmoothBandPath,
+  labelBoxForBand,
+  monotoneTangents,
+  smoothBandBottomWidth,
+} from "./funnelGeometry";
 import {
   buildTooltipHtml,
   buildTooltipRows,
@@ -443,9 +448,20 @@ export default function Funnel(props: FunnelTransformedProps) {
                 pyramidBandWidths(index));
             } else {
               topWidth = barWidth(step);
-              bottomWidth = steps[index + 1]
+              const nextWidth = steps[index + 1]
                 ? barWidth(steps[index + 1])
                 : topWidth;
+              // the smooth edge spans (height + gap) between knots, so the
+              // band's own bottom sits part-way along it
+              bottomWidth =
+                shape === "funnel_smooth"
+                  ? smoothBandBottomWidth({
+                      topWidth,
+                      nextWidth,
+                      height: barHeight,
+                      gap: effectiveGap,
+                    })
+                  : nextWidth;
             }
             const { left: bandLabelLeft, width: bandLabelWidth } =
               labelBoxForBand({

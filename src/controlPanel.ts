@@ -92,6 +92,22 @@ const metricLabelOf = (state: ControlPanelState): string => {
   return metric ? getMetricLabel(metric) : "COUNT(*)";
 };
 
+const columnLabel = (col: unknown): string => {
+  if (typeof col === "string") {
+    return col;
+  }
+  if (col && typeof col === "object") {
+    const obj = col as Record<string, unknown>;
+    if (typeof obj.column_name === "string" && obj.column_name) {
+      return obj.column_name;
+    }
+    if (typeof obj.label === "string" && obj.label) {
+      return obj.label;
+    }
+  }
+  return "";
+};
+
 /**
  * Steps in the exact order the chart renders them, with their values —
  * reuses the chart's own ordering so the color list always matches.
@@ -160,20 +176,23 @@ const chartPalette = (
   const colorMode =
     state.form_data?.color_mode === "custom" ? "custom" : "gradient";
   const scheme = state.form_data?.linear_color_scheme;
-  if (colorMode === "gradient" && !Array.isArray(scheme)) {
-    const palette = schemePaletteColors(
-      typeof scheme === "string" ? scheme : undefined,
-    );
-    if (palette.length > 0) {
-      return palette;
-    }
-  }
-  if (Array.isArray(scheme)) {
-    const palette = scheme
-      .map((color) => parseColorToHex(color))
-      .filter((color): color is string => color !== null);
-    if (palette.length > 0) {
-      return palette;
+  // the scheme is only rendered in the gradient mode; the custom mode
+  // paints steps with their own colors regardless of a stale scheme value
+  if (colorMode === "gradient") {
+    if (Array.isArray(scheme)) {
+      const palette = scheme
+        .map((color) => parseColorToHex(color))
+        .filter((color): color is string => color !== null);
+      if (palette.length > 0) {
+        return palette;
+      }
+    } else {
+      const palette = schemePaletteColors(
+        typeof scheme === "string" ? scheme : undefined,
+      );
+      if (palette.length > 0) {
+        return palette;
+      }
     }
   }
   const colors = resolveStepColors({
@@ -183,22 +202,6 @@ const chartPalette = (
     labels: stepLabels(state, chart),
   });
   return Array.from(new Set(colors));
-};
-
-const columnLabel = (col: unknown): string => {
-  if (typeof col === "string") {
-    return col;
-  }
-  if (col && typeof col === "object") {
-    const obj = col as Record<string, unknown>;
-    if (typeof obj.column_name === "string" && obj.column_name) {
-      return obj.column_name;
-    }
-    if (typeof obj.label === "string" && obj.label) {
-      return obj.label;
-    }
-  }
-  return "";
 };
 
 const config: ControlPanelConfig = {
