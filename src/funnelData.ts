@@ -118,6 +118,20 @@ export function orderStepsForRendering(
 
 export type WidthScale = "linear" | "sqrt" | "log";
 
+/**
+ * The process starts at the widest band, so the 100% reference must sit on
+ * the wide side of the shape: with the descending sort the widest step is
+ * on top (direct references), with the ascending sort it is at the bottom
+ * (reverse references) — either way the percentages stay ≤ 100%. The
+ * fields mode always starts at the first field, whatever its value.
+ */
+export function isReverseReference(options: {
+  dataMode: DataMode;
+  sort: ValueSortMode;
+}): boolean {
+  return options.dataMode === "dimension" && options.sort === "value_asc";
+}
+
 export function widthRatioFor(
   value: number,
   maxValue: number,

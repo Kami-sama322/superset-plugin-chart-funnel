@@ -18,6 +18,7 @@
  */
 import {
   buildFunnelSteps,
+  isReverseReference,
   normalizeSort,
   orderStepsForDataMode,
   orderStepsForRendering,
@@ -178,6 +179,41 @@ test("buildFunnelSteps reverseReference guards zero reference", () => {
   expect(steps[1].percentFirst).toBe(1);
   expect(steps[0].percentFirst).toBeNull();
   expect(steps[0].percentPrevious).toBeNull();
+});
+
+test("isReverseReference puts the 100% reference on the wide side", () => {
+  // ascending: the widest band sits at the bottom -> reverse references
+  expect(
+    isReverseReference({ dataMode: "dimension", sort: "value_asc" }),
+  ).toBe(true);
+  // descending: the widest band is on top -> direct references
+  expect(
+    isReverseReference({ dataMode: "dimension", sort: "value_desc" }),
+  ).toBe(false);
+  // fields mode always starts at the first field
+  expect(isReverseReference({ dataMode: "fields", sort: "value_asc" })).toBe(
+    false,
+  );
+  expect(isReverseReference({ dataMode: "fields", sort: "value_desc" })).toBe(
+    false,
+  );
+});
+
+test("ascending sort with reverse reference keeps conversions at or under 100%", () => {
+  const steps = buildFunnelSteps(
+    [
+      { label: "small", value: 25 },
+      { label: "mid", value: 50 },
+      { label: "wide", value: 100 },
+    ],
+    { reverseReference: true },
+  );
+  expect(steps[0].percentFirst).toBeCloseTo(0.25);
+  expect(steps[0].percentPrevious).toBeCloseTo(0.5);
+  expect(steps[1].percentFirst).toBeCloseTo(0.5);
+  expect(steps[1].percentPrevious).toBeCloseTo(0.5);
+  expect(steps[2].percentFirst).toBe(1);
+  expect(steps[2].percentPrevious).toBeNull();
 });
 
 test("buildFunnelSteps sqrt and log scales compress the width range", () => {

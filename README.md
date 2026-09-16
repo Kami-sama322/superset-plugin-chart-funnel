@@ -24,7 +24,8 @@
 - **Conversion rates**: percent of the first step and percent of the
   previous step — shown on labels, in the conversion column and in tooltips.
   The "first step" is always the widest end of the shape (for pyramids —
-  the base, so conversions stay ≤100%)
+  the base), in either sort direction — the 100% reference follows the
+  wide side, so conversions stay ≤100%
 - Power BI–compatible **label content**: data value / % of first /
   % of previous / combinations
 - **Two shapes**: *Rectangles* (separated centered bars, Power BI look) and
