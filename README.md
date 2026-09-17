@@ -23,9 +23,10 @@
     metric is aggregated over the rows where the column is filled
 - **Conversion rates**: percent of the first step and percent of the
   previous step — shown on labels, in the conversion column and in tooltips.
-  The "first step" is always the widest end of the shape (for pyramids —
-  the base), in either sort direction — the 100% reference follows the
-  wide side, so conversions stay ≤100%
+  The "first step" is always the funnel base — the widest band: at one of
+  the shape ends in the dimension mode (either sort direction), the widest
+  step wherever the field order puts it in the fields mode — so the
+  reference follows the wide side and conversions stay ≤100%
 - Power BI–compatible **label content**: data value / % of first /
   % of previous / combinations
 - **Two shapes**: *Rectangles* (separated centered bars, Power BI look) and

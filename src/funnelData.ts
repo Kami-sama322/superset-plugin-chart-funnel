@@ -118,20 +118,6 @@ export function orderStepsForRendering(
 
 export type WidthScale = "linear" | "sqrt" | "log";
 
-/**
- * The process starts at the widest band, so the 100% reference must sit on
- * the wide side of the shape: with the descending sort the widest step is
- * on top (direct references), with the ascending sort it is at the bottom
- * (reverse references) — either way the percentages stay ≤ 100%. The
- * fields mode always starts at the first field, whatever its value.
- */
-export function isReverseReference(options: {
-  dataMode: DataMode;
-  sort: ValueSortMode;
-}): boolean {
-  return options.dataMode === "dimension" && options.sort === "value_asc";
-}
-
 export function widthRatioFor(
   value: number,
   maxValue: number,
@@ -151,39 +137,64 @@ export function widthRatioFor(
   return v / m;
 }
 
+/**
+ * Index of the process start — the step the 100% reference anchors to.
+ * The process starts at the funnel base (the widest band): in the
+ * dimension mode the value sort already puts it at one of the ends
+ * (bottom for ASC, top for DESC); in the fields mode the field order is
+ * arbitrary, so the widest step is looked up (first occurrence on ties).
+ */
+export function referenceIndexFor(
+  values: number[],
+  options: { dataMode: DataMode; sort: ValueSortMode },
+): number {
+  if (options.dataMode !== "dimension") {
+    let best = 0;
+    values.forEach((value, index) => {
+      if (value > values[best]) {
+        best = index;
+      }
+    });
+    return best;
+  }
+  return normalizeSort(options.sort) === "value_asc"
+    ? Math.max(0, values.length - 1)
+    : 0;
+}
+
 export function buildFunnelSteps(
   sorted: RawStep[],
-  options: { reverseReference?: boolean; widthScale?: WidthScale } = {},
+  options: { referenceIndex?: number; widthScale?: WidthScale } = {},
 ): FunnelStepBase[] {
-  const { reverseReference = false, widthScale = "linear" } = options;
+  const { referenceIndex = 0, widthScale = "linear" } = options;
   const n = sorted.length;
   const maxValue = sorted.reduce(
     (max, step) => Math.max(max, toFiniteNumber(step.value)),
     0,
   );
-  const referenceValue = toFiniteNumber(
-    sorted[reverseReference ? n - 1 : 0]?.value,
-  );
+  const refIndex = n > 0 ? Math.min(Math.max(0, referenceIndex), n - 1) : 0;
+  const referenceValue = toFiniteNumber(sorted[refIndex]?.value);
   return sorted.map((step, index) => {
     const value = toFiniteNumber(step.value);
-    const isFirst = reverseReference ? index === n - 1 : index === 0;
-    const previousValue = reverseReference
-      ? index < n - 1
-        ? toFiniteNumber(sorted[index + 1].value)
-        : null
-      : index > 0
-        ? toFiniteNumber(sorted[index - 1].value)
-        : null;
+    const isReference = index === refIndex;
+    // the neighboring step toward the reference (the wider side): for the
+    // steps above it that is the row below, for the steps below it — the
+    // row above, so every percentage stays ≤ 100%
+    const previousValue = isReference
+      ? null
+      : index < refIndex
+        ? toFiniteNumber(sorted[index + 1]?.value)
+        : toFiniteNumber(sorted[index - 1]?.value);
     return {
       label: step.label,
       value,
-      percentFirst: isFirst
+      percentFirst: isReference
         ? 1
         : referenceValue > 0
           ? value / referenceValue
           : null,
       percentPrevious:
-        isFirst || previousValue === null
+        isReference || previousValue === null
           ? null
           : previousValue > 0
             ? value / previousValue

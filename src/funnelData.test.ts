@@ -18,11 +18,11 @@
  */
 import {
   buildFunnelSteps,
-  isReverseReference,
   normalizeSort,
   orderStepsForDataMode,
   orderStepsForRendering,
   RawStep,
+  referenceIndexFor,
   sortRawSteps,
   toFiniteNumber,
 } from "./funnelData";
@@ -148,16 +148,16 @@ test("buildFunnelSteps keeps filterValue and extra", () => {
   expect(step.extra).toEqual({ col: 1 });
 });
 
-test("buildFunnelSteps reverseReference treats the last step as first", () => {
+test("buildFunnelSteps anchors the reference at the given index", () => {
   const steps = buildFunnelSteps(
     [
       { label: "apex", value: 10 },
       { label: "mid", value: 20 },
       { label: "base", value: 40 },
     ],
-    { reverseReference: true },
+    { referenceIndex: 2 },
   );
-  // base (largest, last) is the process start
+  // base (widest, last) is the process start
   expect(steps[2].percentFirst).toBe(1);
   expect(steps[2].percentPrevious).toBeNull();
   // mid converts from the band below (base)
@@ -168,45 +168,80 @@ test("buildFunnelSteps reverseReference treats the last step as first", () => {
   expect(steps[0].percentPrevious).toBeCloseTo(0.5);
 });
 
-test("buildFunnelSteps reverseReference guards zero reference", () => {
+test("buildFunnelSteps guards a zero reference", () => {
   const steps = buildFunnelSteps(
     [
       { label: "apex", value: 5 },
       { label: "base", value: 0 },
     ],
-    { reverseReference: true },
+    { referenceIndex: 1 },
   );
   expect(steps[1].percentFirst).toBe(1);
   expect(steps[0].percentFirst).toBeNull();
   expect(steps[0].percentPrevious).toBeNull();
 });
 
-test("isReverseReference puts the 100% reference on the wide side", () => {
-  // ascending: the widest band sits at the bottom -> reverse references
+test("referenceIndexFor anchors the 100% reference at the funnel base", () => {
+  // dimension mode: the value sort puts the widest step at an end
   expect(
-    isReverseReference({ dataMode: "dimension", sort: "value_asc" }),
-  ).toBe(true);
-  // descending: the widest band is on top -> direct references
+    referenceIndexFor([10, 20, 40], {
+      dataMode: "dimension",
+      sort: "value_asc",
+    }),
+  ).toBe(2);
   expect(
-    isReverseReference({ dataMode: "dimension", sort: "value_desc" }),
-  ).toBe(false);
-  // fields mode always starts at the first field
-  expect(isReverseReference({ dataMode: "fields", sort: "value_asc" })).toBe(
-    false,
-  );
-  expect(isReverseReference({ dataMode: "fields", sort: "value_desc" })).toBe(
-    false,
+    referenceIndexFor([40, 20, 10], {
+      dataMode: "dimension",
+      sort: "value_desc",
+    }),
+  ).toBe(0);
+  // fields mode: the widest step can sit anywhere — look it up
+  expect(
+    referenceIndexFor([100, 1000, 500], {
+      dataMode: "fields",
+      sort: "value_asc",
+    }),
+  ).toBe(1);
+  expect(
+    referenceIndexFor([500, 100, 1000, 100], {
+      dataMode: "fields",
+      sort: "value_desc",
+    }),
+  ).toBe(2);
+  // ties keep the first occurrence, empty input is safe
+  expect(
+    referenceIndexFor([50, 50], { dataMode: "fields", sort: "value_asc" }),
+  ).toBe(0);
+  expect(referenceIndexFor([], { dataMode: "fields", sort: "value_asc" })).toBe(
+    0,
   );
 });
 
-test("ascending sort with reverse reference keeps conversions at or under 100%", () => {
+test("fields-style steps anchor percentages at the widest band", () => {
+  const steps = buildFunnelSteps(
+    [
+      { label: "purchases", value: 100 },
+      { label: "visits", value: 1000 },
+      { label: "signups", value: 500 },
+    ],
+    { referenceIndex: 1 },
+  );
+  expect(steps[0].percentFirst).toBeCloseTo(0.1);
+  expect(steps[0].percentPrevious).toBeCloseTo(0.1);
+  expect(steps[1].percentFirst).toBe(1);
+  expect(steps[1].percentPrevious).toBeNull();
+  expect(steps[2].percentFirst).toBeCloseTo(0.5);
+  expect(steps[2].percentPrevious).toBeCloseTo(0.5);
+});
+
+test("ascending sort with the base at the bottom keeps conversions at or under 100%", () => {
   const steps = buildFunnelSteps(
     [
       { label: "small", value: 25 },
       { label: "mid", value: 50 },
       { label: "wide", value: 100 },
     ],
-    { reverseReference: true },
+    { referenceIndex: 2 },
   );
   expect(steps[0].percentFirst).toBeCloseTo(0.25);
   expect(steps[0].percentPrevious).toBeCloseTo(0.5);

@@ -27,10 +27,10 @@ import {
 import { DEFAULT_COUNT_METRIC, firstColumn } from "./buildQuery";
 import {
   buildFunnelSteps,
-  isReverseReference,
   normalizeSort,
   orderStepsForDataMode,
   RawStep,
+  referenceIndexFor,
   toFiniteNumber,
   type WidthScale,
 } from "./funnelData";
@@ -249,13 +249,14 @@ export default function transformProps(
   // the dimension mode only; the fields mode always renders in field order.
   const sort = normalizeSort(fd.sort);
   const sorted = orderStepsForDataMode(rawSteps, { dataMode, sort });
-  // The process starts at the widest band: descending puts it on top
-  // (direct references), ascending at the bottom (reverse references) —
-  // either way the percentages stay ≤ 100%.
-  const base = buildFunnelSteps(sorted, {
-    widthScale,
-    reverseReference: isReverseReference({ dataMode, sort }),
-  });
+  // The 100% reference is the funnel base (the widest band): at one of the
+  // ends in the dimension mode, wherever the widest step sits in the
+  // fields mode — the percentages stay ≤ 100% either way.
+  const referenceIndex = referenceIndexFor(
+    sorted.map((step) => step.value),
+    { dataMode, sort },
+  );
+  const base = buildFunnelSteps(sorted, { widthScale, referenceIndex });
 
   const colors = resolveStepColors({
     colorMode,
