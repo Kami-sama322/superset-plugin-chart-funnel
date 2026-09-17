@@ -196,7 +196,8 @@ export default function Funnel(props: FunnelTransformedProps) {
   const isPyramid = shape === "pyramid";
   // DESC sorts mirror the pyramid geometry: the wide base sits on top and
   // the apex points down (the removed "inverted pyramid" shape lives on
-  // through the Sort control in the dimension mode).
+  // through the Sort control). In the fields mode the control only flips
+  // the display, so the same rule holds there.
   const pyramidMirrored = isPyramid && sort === "value_desc";
 
   // Layout model: request the layout from Bar height % (share of the full

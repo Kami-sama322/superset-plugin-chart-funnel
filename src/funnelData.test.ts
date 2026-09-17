@@ -22,7 +22,6 @@ import {
   orderStepsForDataMode,
   orderStepsForRendering,
   RawStep,
-  referenceIndexFor,
   sortRawSteps,
   toFiniteNumber,
 } from "./funnelData";
@@ -148,16 +147,16 @@ test("buildFunnelSteps keeps filterValue and extra", () => {
   expect(step.extra).toEqual({ col: 1 });
 });
 
-test("buildFunnelSteps anchors the reference at the given index", () => {
+test("buildFunnelSteps reverseReference treats the last step as first", () => {
   const steps = buildFunnelSteps(
     [
       { label: "apex", value: 10 },
       { label: "mid", value: 20 },
       { label: "base", value: 40 },
     ],
-    { referenceIndex: 2 },
+    { reverseReference: true },
   );
-  // base (widest, last) is the process start
+  // base (largest, last) is the process start
   expect(steps[2].percentFirst).toBe(1);
   expect(steps[2].percentPrevious).toBeNull();
   // mid converts from the band below (base)
@@ -168,70 +167,37 @@ test("buildFunnelSteps anchors the reference at the given index", () => {
   expect(steps[0].percentPrevious).toBeCloseTo(0.5);
 });
 
-test("buildFunnelSteps guards a zero reference", () => {
+test("buildFunnelSteps reverseReference guards zero reference", () => {
   const steps = buildFunnelSteps(
     [
       { label: "apex", value: 5 },
       { label: "base", value: 0 },
     ],
-    { referenceIndex: 1 },
+    { reverseReference: true },
   );
   expect(steps[1].percentFirst).toBe(1);
   expect(steps[0].percentFirst).toBeNull();
   expect(steps[0].percentPrevious).toBeNull();
 });
 
-test("referenceIndexFor anchors the 100% reference at the funnel base", () => {
-  // dimension mode: the value sort puts the widest step at an end
-  expect(
-    referenceIndexFor([10, 20, 40], {
-      dataMode: "dimension",
-      sort: "value_asc",
-    }),
-  ).toBe(2);
-  expect(
-    referenceIndexFor([40, 20, 10], {
-      dataMode: "dimension",
-      sort: "value_desc",
-    }),
-  ).toBe(0);
-  // fields mode: the widest step can sit anywhere — look it up
-  expect(
-    referenceIndexFor([100, 1000, 500], {
-      dataMode: "fields",
-      sort: "value_asc",
-    }),
-  ).toBe(1);
-  expect(
-    referenceIndexFor([500, 100, 1000, 100], {
-      dataMode: "fields",
-      sort: "value_desc",
-    }),
-  ).toBe(2);
-  // ties keep the first occurrence, empty input is safe
-  expect(
-    referenceIndexFor([50, 50], { dataMode: "fields", sort: "value_asc" }),
-  ).toBe(0);
-  expect(referenceIndexFor([], { dataMode: "fields", sort: "value_asc" })).toBe(
-    0,
-  );
-});
-
-test("fields-style steps anchor percentages at the widest band", () => {
+test("fields mode anchors percentages at the first field (the base)", () => {
+  // the user owns the field order: the first field is always the 100%
+  // reference even when later fields are wider
   const steps = buildFunnelSteps(
     [
-      { label: "purchases", value: 100 },
-      { label: "visits", value: 1000 },
       { label: "signups", value: 500 },
+      { label: "visits", value: 1000 },
+      { label: "purchases", value: 250 },
     ],
-    { referenceIndex: 1 },
+    { reverseReference: false },
   );
-  expect(steps[0].percentFirst).toBeCloseTo(0.1);
-  expect(steps[0].percentPrevious).toBeCloseTo(0.1);
-  expect(steps[1].percentFirst).toBe(1);
-  expect(steps[1].percentPrevious).toBeNull();
+  expect(steps[0].percentFirst).toBe(1);
+  expect(steps[0].percentPrevious).toBeNull();
+  expect(steps[1].percentFirst).toBeCloseTo(2);
+  expect(steps[1].percentPrevious).toBeCloseTo(2);
   expect(steps[2].percentFirst).toBeCloseTo(0.5);
-  expect(steps[2].percentPrevious).toBeCloseTo(0.5);
+  // percent of previous = of the preceding field (visits), not of the base
+  expect(steps[2].percentPrevious).toBeCloseTo(0.25);
 });
 
 test("ascending sort with the base at the bottom keeps conversions at or under 100%", () => {
@@ -241,7 +207,7 @@ test("ascending sort with the base at the bottom keeps conversions at or under 1
       { label: "mid", value: 50 },
       { label: "wide", value: 100 },
     ],
-    { referenceIndex: 2 },
+    { reverseReference: true },
   );
   expect(steps[0].percentFirst).toBeCloseTo(0.25);
   expect(steps[0].percentPrevious).toBeCloseTo(0.5);
@@ -319,15 +285,30 @@ test("normalizeSort keeps value sorts and maps legacy alphabetical sorts", () =>
   expect(normalizeSort("garbage")).toBe("value_asc");
 });
 
-test("orderStepsForDataMode keeps the field order in fields mode", () => {
-  const result = orderStepsForDataMode(
-    [
-      { label: "b", value: 1 },
-      { label: "a", value: 9 },
-    ],
-    { dataMode: "fields", sort: "value_asc" },
-  );
-  expect(result.map((s) => s.label)).toEqual(["b", "a"]);
+test("orderStepsForDataMode keeps the field order in fields mode (DESC)", () => {
+  const steps: RawStep[] = [
+    { label: "b", value: 1 },
+    { label: "a", value: 9 },
+  ];
+  expect(
+    orderStepsForDataMode(steps, {
+      dataMode: "fields",
+      sort: "value_desc",
+    }).map((s) => s.label),
+  ).toEqual(["b", "a"]);
+});
+
+test("orderStepsForDataMode flips the fields display for ASC (apex on top)", () => {
+  const steps: RawStep[] = [
+    { label: "b", value: 1 },
+    { label: "a", value: 9 },
+  ];
+  expect(
+    orderStepsForDataMode(steps, {
+      dataMode: "fields",
+      sort: "value_asc",
+    }).map((s) => s.label),
+  ).toEqual(["a", "b"]);
 });
 
 test("orderStepsForDataMode applies the sort control in dimension mode", () => {

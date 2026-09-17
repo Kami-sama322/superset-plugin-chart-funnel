@@ -91,14 +91,19 @@ export function normalizeSort(sort: unknown): ValueSortMode {
  * value by default, ties alphabetical, so the same dataset renders in the
  * same sequence regardless of the shape (for the pyramid, DESC mirrors the
  * geometry — base at the top, apex at the bottom). Fields mode never
- * re-orders: the step order is the field order.
+ * re-orders: the field order is the step order, and the Sort control only
+ * flips the display — ASC puts the apex (the last field) on top, DESC
+ * keeps the base (the first field) on top.
  */
 export function orderStepsForDataMode(
   steps: RawStep[],
   options: { dataMode: DataMode; sort: SortMode },
 ): RawStep[] {
   if (options.dataMode === "fields") {
-    return [...steps];
+    const copy = [...steps];
+    return normalizeSort(options.sort) === "value_asc"
+      ? copy.reverse()
+      : copy;
   }
   return sortRawSteps(steps, normalizeSort(options.sort));
 }
@@ -137,49 +142,26 @@ export function widthRatioFor(
   return v / m;
 }
 
-/**
- * Index of the process start — the step the 100% reference anchors to.
- * The process starts at the funnel base (the widest band): in the
- * dimension mode the value sort already puts it at one of the ends
- * (bottom for ASC, top for DESC); in the fields mode the field order is
- * arbitrary, so the widest step is looked up (first occurrence on ties).
- */
-export function referenceIndexFor(
-  values: number[],
-  options: { dataMode: DataMode; sort: ValueSortMode },
-): number {
-  if (options.dataMode !== "dimension") {
-    let best = 0;
-    values.forEach((value, index) => {
-      if (value > values[best]) {
-        best = index;
-      }
-    });
-    return best;
-  }
-  return normalizeSort(options.sort) === "value_asc"
-    ? Math.max(0, values.length - 1)
-    : 0;
-}
-
 export function buildFunnelSteps(
   sorted: RawStep[],
-  options: { referenceIndex?: number; widthScale?: WidthScale } = {},
+  options: { reverseReference?: boolean; widthScale?: WidthScale } = {},
 ): FunnelStepBase[] {
-  const { referenceIndex = 0, widthScale = "linear" } = options;
+  const { reverseReference = false, widthScale = "linear" } = options;
   const n = sorted.length;
   const maxValue = sorted.reduce(
     (max, step) => Math.max(max, toFiniteNumber(step.value)),
     0,
   );
-  const refIndex = n > 0 ? Math.min(Math.max(0, referenceIndex), n - 1) : 0;
+  const refIndex = reverseReference ? Math.max(0, n - 1) : 0;
   const referenceValue = toFiniteNumber(sorted[refIndex]?.value);
   return sorted.map((step, index) => {
     const value = toFiniteNumber(step.value);
     const isReference = index === refIndex;
-    // the neighboring step toward the reference (the wider side): for the
-    // steps above it that is the row below, for the steps below it — the
-    // row above, so every percentage stays ≤ 100%
+    // the neighboring step toward the reference (the process start): for
+    // the steps above it that is the row below, for the steps below it —
+    // the row above. In the dimension mode values are sorted, so the
+    // percentages stay ≤ 100%; in the fields mode the user owns the field
+    // order and the ratios follow it verbatim
     const previousValue = isReference
       ? null
       : index < refIndex

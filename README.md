@@ -23,10 +23,10 @@
     metric is aggregated over the rows where the column is filled
 - **Conversion rates**: percent of the first step and percent of the
   previous step — shown on labels, in the conversion column and in tooltips.
-  The "first step" is always the funnel base — the widest band: at one of
-  the shape ends in the dimension mode (either sort direction), the widest
-  step wherever the field order puts it in the fields mode — so the
-  reference follows the wide side and conversions stay ≤100%
+  The "first step" is always the funnel base: in the dimension mode the
+  value sort puts it at one of the shape ends, in the fields mode it is
+  the **first field** in Step fields — arrange the fields from the base
+  toward the apex
 - Power BI–compatible **label content**: data value / % of first /
   % of previous / combinations
 - **Two shapes**: *Rectangles* (separated centered bars, Power BI look) and
@@ -34,11 +34,11 @@
 - **Two extra shapes**: *Smooth funnel* (curved transitions, monotone cubic
   spline — no sharp jumps) and *Pyramid* (triangle with equal-height slices,
   the smallest value at the apex)
-- **Sort control applies to every shape**: ASC keeps the smallest value at
-  the narrow end, DESC flips the pyramid (wide base on top). Sorting is by
-  the metric value with a name tie-break in the same direction (DESC is
-  the exact reverse of ASC); the fields mode always
-  follows the field order (no sort control)
+- **Sort control applies to every shape**: ASC keeps the apex at the top,
+  DESC flips the chart (wide base on top). In the dimension mode it sorts
+  by the metric value with a name tie-break in the same direction (DESC is
+  the exact reverse of ASC); in the fields mode it only flips the display —
+  the field order defines the steps
 - **Bar height, %**: relative bar height — 50% is the automatic fit,
   lower makes bars thinner, higher denser; the gap physically separates
   bars and the chart always fits the screen
@@ -127,9 +127,12 @@ Production image builds work the same way — see the sibling
    - *Dimension values*: select a **Dimension** (e.g. sales stage) and a
      **Metric** (e.g. Opportunity count). Steps are ordered by the metric
      (ascending by default, ASC / DESC sort control).
-   - *Fields as steps*: drag columns into **Step fields** in the order the
-     funnel should follow. Each step value = metric aggregated over rows
+   - *Fields as steps*: drag columns into **Step fields** — the first
+     column is the funnel base (100%), each next one follows it in the
+     process order. Each step value = metric aggregated over rows
      where that column is filled. The default metric is `COUNT(*)`.
+     The **Sort** control only flips the display: ASC puts the apex on
+     top, DESC keeps the base on top.
 3. Tune colors, shape, labels and the tooltip in the **Display** and
    **Tooltip** sections.
 4. To make clicks filter the dashboard, enable **cross-filtering** on the

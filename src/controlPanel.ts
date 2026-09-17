@@ -123,8 +123,10 @@ const orderedStepPairs = (
     state.form_data?.data_mode === "fields" ? "fields" : "dimension";
 
   if (dataMode === "fields") {
-    // The field order IS the step order — no sorting in this mode
-    return ensureIsArray(state.form_data?.fields)
+    // The field order IS the step order; the Sort control only flips the
+    // display (ASC puts the apex — the last field — on top), so this list
+    // mirrors the rendered rows
+    const pairs = ensureIsArray(state.form_data?.fields)
       .map(columnLabel)
       .filter((label: string) => Boolean(label))
       .map((label: string, index: number) => {
@@ -134,6 +136,7 @@ const orderedStepPairs = (
           value: toFiniteNumber(cellValue(row, metricLabel)),
         };
       });
+    return sort === "value_asc" ? [...pairs].reverse() : pairs;
   }
 
   const dimension = columnLabel(state.form_data?.groupby);
@@ -300,12 +303,11 @@ const config: ControlPanelConfig = {
               type: "SelectControl",
               label: t("Sort"),
               description: t(
-                "Order dimension values by the metric value: ascending puts the smallest value on top, descending flips the chart. Equal values are ordered by name in the same direction, so descending is the exact reverse of ascending. In the fields mode the order follows the field order.",
+                "Dimension values: order by the metric value — ascending puts the smallest value on top, descending flips the chart; equal values are ordered by name in the same direction. Fields as steps: the field order defines the steps, and the control only flips the display — ascending puts the apex on top, descending the base.",
               ),
               renderTrigger: true,
               default: "value_asc",
               clearable: false,
-              visibility: inDimensionMode,
               options: [
                 { label: t("Ascending"), value: "value_asc" },
                 { label: t("Descending"), value: "value_desc" },

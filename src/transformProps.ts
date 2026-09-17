@@ -30,7 +30,6 @@ import {
   normalizeSort,
   orderStepsForDataMode,
   RawStep,
-  referenceIndexFor,
   toFiniteNumber,
   type WidthScale,
 } from "./funnelData";
@@ -245,18 +244,18 @@ export default function transformProps(
     }
   }
 
-  // ASC / DESC by metric value (ties break by name). The sort applies to
-  // the dimension mode only; the fields mode always renders in field order.
+  // ASC / DESC by metric value (ties break by name).
   const sort = normalizeSort(fd.sort);
+  // Dimension: the sort orders the steps by value. Fields: the field
+  // order is never re-sorted — the Sort control only flips the display
+  // (ASC puts the apex — the last field — on top, DESC keeps the base on
+  // top), and the calculations always anchor at the first field (the
+  // process base).
   const sorted = orderStepsForDataMode(rawSteps, { dataMode, sort });
-  // The 100% reference is the funnel base (the widest band): at one of the
-  // ends in the dimension mode, wherever the widest step sits in the
-  // fields mode — the percentages stay ≤ 100% either way.
-  const referenceIndex = referenceIndexFor(
-    sorted.map((step) => step.value),
-    { dataMode, sort },
-  );
-  const base = buildFunnelSteps(sorted, { widthScale, referenceIndex });
+  const base = buildFunnelSteps(sorted, {
+    widthScale,
+    reverseReference: sort === "value_asc",
+  });
 
   const colors = resolveStepColors({
     colorMode,
