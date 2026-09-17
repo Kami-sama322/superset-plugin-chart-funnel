@@ -133,6 +133,18 @@ test("buildTooltipHtml renders the custom template", () => {
   expect(html).toContain("<b>Proposal</b>: 420 (70.0%)");
 });
 
+test("buildTooltipHtml renders a static custom template verbatim", () => {
+  const template = `<div style="margin-bottom: 10px;">
+  <!-- Тултип с произвольным текстом при наведении на метрику -->
+  <span title="Произвольный статический текст. Значение из базы: ">
+    Hover here for details
+  </span>
+</div>`;
+  const html = buildTooltipHtml(template, input(), "Count");
+  expect(html).toContain("Hover here for details");
+  expect(html).toContain('title="Произвольный статический текст. Значение из базы:"');
+});
+
 test("buildTooltipHtml falls back to the default template on broken custom", () => {
   const html = buildTooltipHtml("{{#ifunclosed}}", input(), "Count");
   expect(html).toContain("Proposal");
