@@ -25,6 +25,12 @@
   - *Fields as steps* — insert several columns; each column becomes a step,
     **the step order matches the order of the inserted fields**, and the
     metric is aggregated over the rows where the column is filled
+- **Per-step metrics** (fields mode): every step gets its own metric —
+  a dataset column with an aggregate (Sum, Count, **Count distinct**,
+  Average, Min, Max), a saved dataset metric, or a **custom SQL
+  expression**. Steps without one count the rows where the field is
+  filled (`COUNT(*)`). This builds funnels over different measures
+  directly, e.g. unique applications → unique clients → event counts
 - **Conversion rates**: percent of the first step and percent of the
   previous step — shown on labels, in the conversion column and in tooltips.
   The "first step" is always the funnel base: in the dimension mode the
@@ -133,12 +139,24 @@ Production image builds work the same way — see the sibling
    - *Dimension values*: select a **Dimension** (e.g. sales stage) and a
      **Metric** (e.g. Opportunity count). Steps are ordered by the metric
      (ascending by default, ASC / DESC sort control).
-   - *Fields as steps*: drag columns into **Step fields** — the first
-     column is the funnel base (100%), each next one follows it in the
-     process order. Each step value = metric aggregated over rows
-     where that column is filled. The default metric is `COUNT(*)`.
-     The **Sort** control only flips the display: ASC puts the apex on
-     top, DESC keeps the base on top.
+    - *Fields as steps*: drag columns into **Step fields** — the first
+      column is the funnel base (100%), each next one follows it in the
+      process order. In **Step metrics** every new field starts preselected
+      on **its own column + Count** (numerically the same as `COUNT(*)`):
+      switch the **aggregate** next to it (e.g. `Count distinct` on an ID
+      column for unique counts, `Sum` on a 0/1 flag for event counts),
+      pick a **saved metric**, or choose **SQL expression** and type any
+      SQL — it is applied on blur / Enter, and clearing it removes the
+      metric. Steps without their own metric count the rows where the
+      field is filled (`COUNT(*)`; the select placeholder shows the exact
+      fallback). The **Sort** control only flips the display:
+      ASC puts the apex on top, DESC keeps the base on top.
+
+   Example — dataset `app_id, client_id, event_1 (0/1), event_2 (0/1)`:
+   fields `app_id, client_id, event_1, event_2` with step metrics
+   `COUNT_DISTINCT(app_id)`, `COUNT_DISTINCT(client_id)`, `SUM(event_1)`,
+   `SUM(event_2)` and the shared Metric left empty render
+   unique applications → unique clients → event 1 → event 2 in one chart.
 3. Tune colors, shape, labels and the tooltip in the **Display** and
    **Tooltip** sections.
 4. To make clicks filter the dashboard, enable **cross-filtering** on the
@@ -168,7 +186,8 @@ Columns selected in **Tooltip contents** are available by their names
 | Data mode | both | `dimension` (group by) or `fields` (columns as steps) |
 | Dimension | dimension | Column with step values |
 | Step fields | fields | Columns, one per step; order matters |
-| Metric | both | Aggregation; empty → `COUNT(*)` |
+| Step metrics | fields | Metric per step field: column + aggregate, saved metric, or custom SQL; new fields start preselected on their own column + Count; keyed by field name, survives reordering |
+| Metric | dimension | Shared step metric; empty → `COUNT(*)` |
 | Row limit | dimension | Default 50 steps max |
 
 ### Display

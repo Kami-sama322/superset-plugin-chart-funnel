@@ -121,6 +121,15 @@ test("buildFunnelSteps clamps negative values to zero width but keeps raw percen
   expect(steps[1].value).toBe(-5);
 });
 
+test("buildFunnelSteps carries the per-step metric label through", () => {
+  const steps = buildFunnelSteps([
+    { label: "a", value: 10, metricLabel: "COUNT_DISTINCT(a)" },
+    { label: "b", value: 5, metricLabel: "SUM(b)" },
+  ]);
+  expect(steps[0].metricLabel).toBe("COUNT_DISTINCT(a)");
+  expect(steps[1].metricLabel).toBe("SUM(b)");
+});
+
 test("buildFunnelSteps guards division by zero", () => {
   const steps = buildFunnelSteps([
     { label: "a", value: 0 },

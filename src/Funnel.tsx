@@ -303,6 +303,9 @@ export default function Funnel(props: FunnelTransformedProps) {
     tooltip && tooltip.stepIndex < steps.length
       ? steps[tooltip.stepIndex]
       : null;
+  // In the fields mode every step can carry its own metric — the tooltip
+  // names the metric that actually produced this step's value.
+  const tooltipMetricLabel = tooltipStep?.metricLabel ?? metricLabel;
 
   const tooltipStyle: CSSProperties | undefined = tooltip
     ? {
@@ -555,9 +558,12 @@ export default function Funnel(props: FunnelTransformedProps) {
             html={buildTooltipHtml(
               tooltipTemplate,
               tooltipInputFor(tooltipStep),
-              metricLabel,
+              tooltipMetricLabel,
             )}
-            rows={buildTooltipRows(tooltipInputFor(tooltipStep), metricLabel)}
+            rows={buildTooltipRows(
+              tooltipInputFor(tooltipStep),
+              tooltipMetricLabel,
+            )}
           />
         </div>
       ) : null}

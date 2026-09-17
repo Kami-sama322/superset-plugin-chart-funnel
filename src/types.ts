@@ -59,6 +59,8 @@ export type FunnelStep = {
   filterColumn: string;
   /** Raw dimension value used for the cross-filter (dimension mode) */
   filterValue: DataRecordValue;
+  /** Metric label the step value was aggregated with (fields mode) */
+  metricLabel?: string;
   /** Source data row (dimension mode) for tooltip extra fields */
   extra: Record<string, unknown>;
 };
@@ -68,6 +70,9 @@ export type FunnelQueryFormData = QueryFormData & {
   dataMode?: DataMode;
   groupby?: QueryFormColumn | QueryFormColumn[];
   fields?: QueryFormColumn[];
+  /** Per-step metric overrides keyed by the step field name (fields mode) */
+  step_metrics?: Record<string, QueryFormMetric> | null;
+  stepMetrics?: Record<string, QueryFormMetric> | null;
   metric?: QueryFormMetric;
   sort?: SortMode;
   shape?: FunnelShape;

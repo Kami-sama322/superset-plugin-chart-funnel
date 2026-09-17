@@ -141,6 +141,99 @@ test("fields mode throws without fields", () => {
   );
 });
 
+test("fields mode uses the per-step metric for the matching field only", () => {
+  const override = {
+    expressionType: "SQL" as const,
+    sqlExpression: "COUNT(DISTINCT app_id)",
+    label: "COUNT(DISTINCT app_id)",
+  };
+  const context = buildQuery(
+    formData({
+      data_mode: "fields",
+      fields: ["app_id", "event_1"],
+      metric: "revenue",
+      step_metrics: { app_id: override },
+    }),
+  );
+  expect(context.queries).toHaveLength(2);
+  expect(context.queries[0].metrics).toEqual([override]);
+  expect(context.queries[1].metrics).toEqual(["revenue"]);
+});
+
+test("fields mode reads camelCase stepMetrics too", () => {
+  const context = buildQuery(
+    formData({
+      dataMode: "fields",
+      fields: ["app_id"],
+      stepMetrics: { app_id: "saved_metric" },
+    }),
+  );
+  expect(context.queries[0].metrics).toEqual(["saved_metric"]);
+});
+
+test("fields mode per-step metric falls back to COUNT(*) when shared is unset", () => {
+  const context = buildQuery(
+    formData({
+      data_mode: "fields",
+      fields: ["a", "b"],
+      step_metrics: { a: "saved_metric" },
+    }),
+  );
+  expect(context.queries[0].metrics).toEqual(["saved_metric"]);
+  expect(context.queries[1].metrics).toEqual([DEFAULT_COUNT_METRIC]);
+});
+
+test("fields mode ignores malformed per-step metric entries", () => {
+  const context = buildQuery(
+    formData({
+      data_mode: "fields",
+      fields: ["a"],
+      step_metrics: { a: 42 } as never,
+    }),
+  );
+  expect(context.queries[0].metrics).toEqual([DEFAULT_COUNT_METRIC]);
+});
+
+test("fields mode falls back while a custom SQL metric is being authored", () => {
+  const context = buildQuery(
+    formData({
+      data_mode: "fields",
+      fields: ["a"],
+      metric: "revenue",
+      step_metrics: { a: { expressionType: "SQL", sqlExpression: "  " } },
+    }),
+  );
+  expect(context.queries[0].metrics).toEqual(["revenue"]);
+});
+
+test("fields mode sends a complete custom SQL step metric", () => {
+  const override = {
+    expressionType: "SQL" as const,
+    sqlExpression: "CASE WHEN event_1 = 1 THEN 1 END",
+    label: "CASE WHEN event_1 = 1 THEN 1 END",
+  };
+  const context = buildQuery(
+    formData({
+      data_mode: "fields",
+      fields: ["a"],
+      step_metrics: { a: override },
+    }),
+  );
+  expect(context.queries[0].metrics).toEqual([override]);
+});
+
+test("dimension mode ignores per-step metrics", () => {
+  const context = buildQuery(
+    formData({
+      data_mode: "dimension",
+      groupby: "stage",
+      metric: "count",
+      step_metrics: { stage: "other" },
+    }),
+  );
+  expect(context.queries[0].metrics).toEqual(["count"]);
+});
+
 test("camelCase dataMode is respected", () => {
   const context = buildQuery(
     formData({ dataMode: "fields", fields: ["step_one"] }),

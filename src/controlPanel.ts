@@ -29,10 +29,13 @@ import {
   D3_FORMAT_DOCS,
   D3_FORMAT_OPTIONS,
   DEFAULT_NUMBER_FORMAT,
+  defineSavedMetrics,
   sharedControls,
 } from "@superset-ui/chart-controls";
 import StepColorsControl from "./controls/StepColorsControl";
+import StepMetricsControl from "./controls/StepMetricsControl";
 import LabelColorControl from "./controls/LabelColorControl";
+import { stepMetricKey } from "./stepMetrics";
 import {
   normalizeSort,
   orderStepsForRendering,
@@ -220,7 +223,7 @@ const config: ControlPanelConfig = {
               type: "RadioButtonControl",
               label: t("Data mode"),
               description: t(
-                "Dimension values: group the dataset by one column, one value is one funnel step. Fields as steps: each inserted column is a step in the order it was added; the metric is aggregated over rows where the column is filled.",
+                "Dimension values: group the dataset by one column, one value is one funnel step. Fields as steps: each inserted column is a step in the order it was added; the metric of every step is set in Step metrics.",
               ),
               renderTrigger: false,
               default: "dimension",
@@ -274,14 +277,41 @@ const config: ControlPanelConfig = {
         ],
         [
           {
+            name: "step_metrics",
+            config: {
+              type: StepMetricsControl,
+              label: t("Step metrics"),
+              description: t(
+                "Metric per step field. A newly added field starts with its own column and Count — switch the aggregate (e.g. Count distinct for unique counts, Sum for 0/1 flags), pick a saved metric, or write a custom SQL expression. A step without its own metric counts the rows where the field is filled (COUNT(*)).",
+              ),
+              renderTrigger: false,
+              default: null,
+              visibility: inFieldsMode,
+              shouldMapStateToProps: () => true,
+              mapStateToProps: (state: ControlPanelState) => ({
+                fieldNames: ensureIsArray(state.form_data?.fields)
+                  .map(stepMetricKey)
+                  .filter(Boolean),
+                columns: (state.datasource?.columns || []).filter(
+                  isGroupableColumn,
+                ),
+                savedMetrics: defineSavedMetrics(state.datasource),
+                fallbackMetricLabel: metricLabelOf(state),
+              }),
+            },
+          },
+        ],
+        [
+          {
             name: "metric",
             config: {
               ...sharedControls.metric,
               label: t("Metric"),
               description: t(
-                "Aggregation for each step. Defaults to COUNT(*) when empty.",
+                "Metric for every step. In Fields as steps mode metrics are set per step in Step metrics; steps without their own metric fall back to this one, or COUNT(*) when empty.",
               ),
               validators: [],
+              visibility: inDimensionMode,
             },
           },
         ],

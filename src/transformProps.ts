@@ -23,6 +23,7 @@ import {
   getColumnLabel,
   getMetricLabel,
   QueryFormColumn,
+  QueryFormMetric,
 } from "@superset-ui/core";
 import { DEFAULT_COUNT_METRIC, firstColumn } from "./buildQuery";
 import {
@@ -33,6 +34,7 @@ import {
   toFiniteNumber,
   type WidthScale,
 } from "./funnelData";
+import { resolveStepMetric } from "./stepMetrics";
 import { resolveStepColors } from "./funnelColors";
 import {
   ConversionColumnContent,
@@ -118,6 +120,21 @@ export default function transformProps(
   const dataMode = pick<DataMode>(fd, "dataMode", "data_mode", "dimension");
   const metric = fd.metric ?? raw.metric;
   const metricLabel = getMetricLabel(metric ?? DEFAULT_COUNT_METRIC);
+  // Per-step metric overrides are authored under the raw control name;
+  // read both casings like every other dual-cased form value.
+  const stepMetrics =
+    pick<Record<string, QueryFormMetric> | undefined>(
+      fd,
+      "stepMetrics",
+      "step_metrics",
+      undefined,
+    ) ??
+    pick<Record<string, QueryFormMetric> | undefined>(
+      raw,
+      "stepMetrics",
+      "step_metrics",
+      undefined,
+    );
   const shape = pick<FunnelShape>(fd, "shape", "shape", "bars");
   const colorMode = pick<FunnelColorMode>(
     fd,
@@ -212,10 +229,15 @@ export default function transformProps(
     } else {
       fields.forEach((field, index) => {
         const rows: DataRecord[] = queriesData?.[index]?.data || [];
+        const stepMetric = resolveStepMetric(stepMetrics, field, metric);
+        const stepMetricLabel = getMetricLabel(
+          stepMetric ?? DEFAULT_COUNT_METRIC,
+        );
         rawSteps.push({
           label: getColumnLabel(field),
-          value: toFiniteNumber(cellValue(rows[0] || {}, metricLabel)),
+          value: toFiniteNumber(cellValue(rows[0] || {}, stepMetricLabel)),
           extra: {},
+          metricLabel: stepMetricLabel,
         });
       });
     }

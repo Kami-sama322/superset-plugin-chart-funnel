@@ -24,6 +24,8 @@ export type RawStep = {
   value: number;
   filterValue?: DataRecordValue;
   extra?: Record<string, unknown>;
+  /** Metric label the value was aggregated with (fields mode) */
+  metricLabel?: string;
 };
 
 export type FunnelStepBase = {
@@ -34,6 +36,7 @@ export type FunnelStepBase = {
   widthRatio: number;
   filterValue: DataRecordValue;
   extra: Record<string, unknown>;
+  metricLabel?: string;
 };
 
 export function toFiniteNumber(value: unknown): number {
@@ -184,6 +187,7 @@ export function buildFunnelSteps(
       widthRatio: widthRatioFor(value, maxValue, widthScale),
       filterValue: step.filterValue ?? step.label,
       extra: step.extra || {},
+      metricLabel: step.metricLabel,
     };
   });
 }

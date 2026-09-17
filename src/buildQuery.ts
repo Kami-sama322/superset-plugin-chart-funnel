@@ -26,6 +26,7 @@ import {
   QueryObject,
 } from "@superset-ui/core";
 import { normalizeSort } from "./funnelData";
+import { resolveStepMetric } from "./stepMetrics";
 import { DataMode, FunnelQueryFormData, ValueSortMode } from "./types";
 
 export const DEFAULT_COUNT_METRIC: QueryFormMetric = {
@@ -78,12 +79,16 @@ export default function buildQuery(formData: FunnelQueryFormData) {
     if (fields.length === 0) {
       throw new Error("Add at least one step field");
     }
+    const stepMetrics = formData.step_metrics ?? formData.stepMetrics;
     return buildQueryContext(formData, {
       buildQuery: (baseQueryObject: QueryObject) =>
         fields.map((field) => ({
           ...baseQueryObject,
           columns: [],
-          metrics: [metric],
+          metrics: [
+            resolveStepMetric(stepMetrics, field, metric) ??
+              DEFAULT_COUNT_METRIC,
+          ],
           filters: [
             ...(baseQueryObject.filters || []),
             {
