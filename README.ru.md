@@ -12,6 +12,10 @@
 
 ---
 
+![exmpl](./images/chart_example.gif)
+
+---
+
 ## ✨ Возможности
 
 - Чарт для дашборда (**не** Native Filter)
@@ -71,6 +75,8 @@
 ## 🚀 Установка
 
 ### Шаг 1. Клонируйте репозиторий Superset (нужной версии)
+
+![exmpl](./images/tag.png)
 
 ```bash
 git clone https://github.com/apache/superset.git -b 6.1.0;

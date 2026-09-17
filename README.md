@@ -12,6 +12,10 @@
 
 ---
 
+![exmpl](./images/chart_example.gif)
+
+---
+
 ## ✨ Features
 
 - Dashboard chart (**not** a Native Filter)
@@ -71,6 +75,8 @@
 ## 🚀 Installation
 
 ### Step 1. Clone the Superset repository (target version)
+
+![exmpl](./images/tag.png)
 
 ```bash
 git clone https://github.com/apache/superset.git -b 6.1.0;
