@@ -227,6 +227,28 @@ function compileTemplate(source: string): CompiledTemplate {
   return compiled;
 }
 
+let warnedAboutTemplateFailure = false;
+
+/**
+ * A failed custom template is otherwise silent: the tooltip falls back to
+ * the default rows and the user cannot tell why. Warn once per session —
+ * the most common cause is a CSP without 'unsafe-eval', which Handlebars
+ * needs for runtime compilation.
+ */
+function warnTemplateFailure(error: unknown): void {
+  if (warnedAboutTemplateFailure) {
+    return;
+  }
+  warnedAboutTemplateFailure = true;
+  const reason = error instanceof Error ? error.message : String(error);
+  console.warn(
+    `[plugin-chart-funnel] Custom tooltip template failed to render (${reason}); ` +
+      "falling back to the default tooltip. If the reason mentions " +
+      "Content Security Policy / unsafe-eval, allow 'unsafe-eval' in " +
+      "script-src — Handlebars compiles templates with eval at runtime.",
+  );
+}
+
 export function buildTooltipHtml(
   template: string | undefined,
   input: FunnelTooltipInput,
@@ -241,8 +263,9 @@ export function buildTooltipHtml(
     if (rendered.trim()) {
       return maybeSanitize(rendered);
     }
-  } catch {
-    // fall through to the default template
+    warnTemplateFailure(new Error("template rendered to empty content"));
+  } catch (error) {
+    warnTemplateFailure(error);
   }
   try {
     return maybeSanitize(
@@ -250,7 +273,8 @@ export function buildTooltipHtml(
         compileTemplate(buildDefaultTemplate(input, metricLabel))(data) ?? "",
       ),
     );
-  } catch {
+  } catch (error) {
+    warnTemplateFailure(error);
     return "";
   }
 }

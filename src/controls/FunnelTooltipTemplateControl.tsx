@@ -55,7 +55,7 @@ export default function FunnelTooltipTemplateControl({
             <InfoTooltip
               iconStyle={{ marginLeft: theme.sizeUnit }}
               tooltip={t(
-                "Handlebars template for the hover tooltip. Built-in variables: label, value, value_formatted, percent_first, percent_first_formatted, percent_previous, percent_previous_formatted. Columns from Tooltip contents are also available.",
+                "Handlebars template for the hover tooltip. Built-in variables: label, value, value_formatted, percent_first, percent_first_formatted, percent_previous, percent_previous_formatted. Columns from Tooltip contents are also available. Requires 'unsafe-eval' in the CSP script-src: without it Handlebars cannot compile at runtime and the default tooltip is shown.",
               )}
             />
           </>

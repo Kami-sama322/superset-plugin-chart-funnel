@@ -146,6 +146,11 @@ Built-ins: `{{label}}`, `{{value}}`, `{{value_formatted}}`,
 Columns selected in **Tooltip contents** are available by their names
 (dimension mode).
 
+> **CSP requirement**: Handlebars compiles templates at runtime, so the
+> Superset CSP must allow `'unsafe-eval'` in `script-src` (see
+> `TALISMAN_CONFIG`). Without it every template render throws and the
+> tooltip silently falls back to the default rows.
+
 ---
 
 ## ⚙️ Configuration reference
