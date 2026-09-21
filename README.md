@@ -198,7 +198,7 @@ Columns selected in **Tooltip contents** are available by their names
 | Color mode | Gradient / Custom per-step colors |
 | Gradient color scheme | Sequential scheme (gradient mode) |
 | Step colors | Ready-made per-step picker list (populated from the query result / step fields); unset steps fall back to the categorical scheme |
-| Show labels + Label content | Label visibility and what the bar label shows: Data value / % of first / % of previous / combos |
+| Show labels + Label content | Label visibility and what the bar label shows: Data value / % of first / % of previous / combos. A label that does not fit a narrow step is shifted out to the left of the step, right-aligned with its left edge |
 | Conversion column | Checkbox + content select: Data value / % of previous / % of first |
 | Bar height, % | 100% = bars fill the screen (default), lower = thinner; the gap is a physical separation and stays intact |
 | Number format / Percent format | Standard Superset D3 format controls |

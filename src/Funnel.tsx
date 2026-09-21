@@ -50,7 +50,17 @@ import {
   buildTooltipRows,
   tooltipContentFields,
 } from "./tooltipUtils";
-import { FunnelStep, FunnelTransformedProps, LabelContentType } from "./types";
+import {
+  buildLabelText,
+  cssFont,
+  labelOverflows,
+  LABEL_FONT_WEIGHT,
+  LABEL_INNER_PAD,
+  LABEL_OUT_GAP,
+  measureTextWidth,
+  percentText,
+} from "./labelUtils";
+import { FunnelStep, FunnelTransformedProps } from "./types";
 import { useTooltipPosition } from "./useTooltipPosition";
 
 const PAD = 8;
@@ -65,35 +75,6 @@ const MIN_VISIBLE_HEIGHT = 150;
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
-}
-
-function percentText(
-  value: number | null,
-  format: (v: number) => string,
-): string {
-  return value === null ? "" : format(value);
-}
-
-function labelText(
-  step: FunnelStep,
-  contentType: LabelContentType,
-  formatValue: (v: number) => string,
-  formatPercent: (v: number) => string,
-): string {
-  const value = formatValue(step.value);
-  switch (contentType) {
-    case "percent_first":
-      return percentText(step.percentFirst, formatPercent);
-    case "percent_previous":
-      return percentText(step.percentPrevious, formatPercent);
-    case "value_percent_first":
-      return `${value} · ${percentText(step.percentFirst, formatPercent)}`;
-    case "value_percent_previous":
-      return `${value} · ${percentText(step.percentPrevious, formatPercent)}`;
-    case "value":
-    default:
-      return value;
-  }
 }
 
 const STATUS_MESSAGES: Record<string, string> = {
@@ -172,6 +153,29 @@ export default function Funnel(props: FunnelTransformedProps) {
   const percentFormatter = useMemo(
     () => getNumberFormatter(percentFormat),
     [percentFormat],
+  );
+
+  // Canvas font shorthand matching the rendered label style — used to
+  // measure whether a label fits inside its band.
+  const labelFont = useMemo(
+    () => cssFont(labelFontSize, theme.fontFamily || "sans-serif"),
+    [labelFontSize, theme.fontFamily],
+  );
+  const measureLabel = useMemo(
+    () => (text: string) => measureTextWidth(text, labelFont),
+    [labelFont],
+  );
+  const labelTexts = useMemo(
+    () =>
+      steps.map((step) =>
+        buildLabelText(
+          step,
+          labelContentType,
+          valueFormatter,
+          percentFormatter,
+        ),
+      ),
+    [steps, labelContentType, valueFormatter, percentFormatter],
   );
 
   const selectedValues = useMemo(
@@ -480,41 +484,57 @@ export default function Funnel(props: FunnelTransformedProps) {
                 : labelAlignment === "right"
                   ? "flex-end"
                   : "flex-start";
+            const text = labelTexts[index];
+            const availableLabelWidth = Math.max(
+              0,
+              bandLabelWidth - LABEL_INNER_PAD * 2,
+            );
+            const labelShifted = labelOverflows(
+              text,
+              availableLabelWidth,
+              measureLabel,
+            );
             return (
               <div key={`overlay-${step.label}-${index}`}>
                 {showLabels ? (
                   <span
                     style={{
                       position: "absolute",
-                      left: bandLabelLeft,
                       top: stepTop(index),
-                      width: Math.max(0, bandLabelWidth),
                       height: barHeight,
                       display: "flex",
                       alignItems: "center",
-                      justifyContent: labelJustify,
-                      padding: `0 ${PAD + 2}px`,
-                      boxSizing: "border-box",
-                      color:
-                        labelColor ||
-                        (isDarkColor(step.color) ? "#fff" : theme.colorText),
                       fontSize: labelFontSize,
-                      fontWeight: 500,
+                      fontWeight: LABEL_FONT_WEIGHT,
                       fontVariantNumeric: "tabular-nums",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
                       whiteSpace: "nowrap",
                       pointerEvents: "none",
+                      ...(labelShifted
+                        ? {
+                            // the text does not fit the band — hang it out
+                            // to the left, right-aligned with the band's
+                            // left edge (its start)
+                            right: width - bandLabelLeft + LABEL_OUT_GAP,
+                            width: "max-content",
+                            color: labelColor || theme.colorText,
+                          }
+                        : {
+                            left: bandLabelLeft,
+                            width: Math.max(0, bandLabelWidth),
+                            justifyContent: labelJustify,
+                            padding: `0 ${LABEL_INNER_PAD}px`,
+                            boxSizing: "border-box",
+                            color:
+                              labelColor ||
+                              (isDarkColor(step.color)
+                                ? "#fff"
+                                : theme.colorText),
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                          }),
                     }}
-                    title={step.label}
                   >
-                    {step.label}&nbsp;·&nbsp;
-                    {labelText(
-                      step,
-                      labelContentType,
-                      valueFormatter,
-                      percentFormatter,
-                    )}
+                    {text}
                   </span>
                 ) : null}
                 {conversionShown ? (
