@@ -41,7 +41,9 @@ import {
 import { isDarkColor } from "./funnelColors";
 import {
   buildSmoothBandPath,
+  buildSmoothHalfBandPath,
   labelBoxForBand,
+  labelBoxForHalfBand,
   monotoneTangents,
   smoothBandBottomWidth,
 } from "./funnelGeometry";
@@ -51,20 +53,27 @@ import {
   tooltipContentFields,
 } from "./tooltipUtils";
 import {
-  buildLabelText,
+  buildValueText,
   cssFont,
-  labelOverflows,
   LABEL_FONT_WEIGHT,
   LABEL_INNER_PAD,
   LABEL_OUT_GAP,
   measureTextWidth,
+  NAMES_GAP,
   percentText,
+  truncateName,
 } from "./labelUtils";
 import { FunnelStep, FunnelTransformedProps } from "./types";
 import { useTooltipPosition } from "./useTooltipPosition";
 
 const PAD = 8;
 const CONVERSION_COL_WIDTH = 76;
+/** Font weight of the conversion column text (regular, unlike the labels) */
+const CONVERSION_FONT_WEIGHT = 400;
+/** Funnel area narrower than this switches to the half-funnel layout */
+const HALF_FUNNEL_TRIGGER_PX = 240;
+/** Minimum room to the left of a band for the shifted-out value */
+const MIN_SHIFT_ROOM_PX = 24;
 const TOOLTIP_OFFSET = 14;
 const TOOLTIP_WIDTH = 240;
 const TOOLTIP_HEIGHT = 150;
@@ -155,20 +164,32 @@ export default function Funnel(props: FunnelTransformedProps) {
     [percentFormat],
   );
 
-  // Canvas font shorthand matching the rendered label style — used to
-  // measure whether a label fits inside its band.
+  // Canvas font shorthand matching the rendered label styles — used to
+  // size the step-name column.
   const labelFont = useMemo(
     () => cssFont(labelFontSize, theme.fontFamily || "sans-serif"),
     [labelFontSize, theme.fontFamily],
   );
-  const measureLabel = useMemo(
-    () => (text: string) => measureTextWidth(text, labelFont),
-    [labelFont],
-  );
-  const labelTexts = useMemo(
+
+  // Step names live in their own left column, always left-aligned and
+  // truncated to MAX_NAME_CHARS. The column hugs the longest truncated
+  // name, so short names never squeeze the funnel.
+  const namesWidth = useMemo(() => {
+    let max = 0;
+    for (const step of steps) {
+      const w = measureTextWidth(truncateName(step.label), labelFont);
+      if (w > max) {
+        max = w;
+      }
+    }
+    return steps.length > 0 ? max : 0;
+  }, [steps, labelFont]);
+  const namesZone = namesWidth > 0 ? namesWidth + NAMES_GAP : 0;
+
+  const valueTexts = useMemo(
     () =>
       steps.map((step) =>
-        buildLabelText(
+        buildValueText(
           step,
           labelContentType,
           valueFormatter,
@@ -177,6 +198,44 @@ export default function Funnel(props: FunnelTransformedProps) {
       ),
     [steps, labelContentType, valueFormatter, percentFormatter],
   );
+
+  const conversionShown = conversionColumnContent !== "none";
+  // Conversion column font follows Label font size, so its zone width is
+  // measured from the actual texts (same regular weight the column uses),
+  // floored at the historical fixed width to keep default charts stable.
+  const conversionFont = useMemo(
+    () =>
+      cssFont(
+        labelFontSize,
+        theme.fontFamily || "sans-serif",
+        CONVERSION_FONT_WEIGHT,
+      ),
+    [labelFontSize, theme.fontFamily],
+  );
+  const conversionTexts = useMemo(
+    () =>
+      steps.map((step) =>
+        conversionColumnContent === "value"
+          ? valueFormatter(step.value)
+          : conversionColumnContent === "percent_first"
+            ? percentText(step.percentFirst, percentFormatter)
+            : percentText(step.percentPrevious, percentFormatter),
+      ),
+    [steps, conversionColumnContent, valueFormatter, percentFormatter],
+  );
+  const conversionWidth = useMemo(() => {
+    if (!conversionShown) {
+      return 0;
+    }
+    let max = 0;
+    for (const text of conversionTexts) {
+      const w = measureTextWidth(text, conversionFont);
+      if (w > max) {
+        max = w;
+      }
+    }
+    return Math.max(CONVERSION_COL_WIDTH, Math.ceil(max) + 16);
+  }, [conversionShown, conversionTexts, conversionFont]);
 
   const selectedValues = useMemo(
     () => ensureIsArray(filterState?.value) as DataRecordValue[],
@@ -189,12 +248,18 @@ export default function Funnel(props: FunnelTransformedProps) {
   );
 
   const stepCount = steps.length;
-  const conversionShown = conversionColumnContent !== "none";
   const conversionOnLeft =
     conversionShown && conversionColumnPosition === "left";
-  const conversionWidth = conversionShown ? CONVERSION_COL_WIDTH : 0;
-  const contentLeft = PAD + (conversionOnLeft ? conversionWidth : 0);
-  const innerWidth = Math.max(10, width - PAD * 2 - conversionWidth);
+  // Row zones: [conversion (left pos)][step names][funnel][conversion
+  // (right pos)]. Step names always form the leftmost column next to the
+  // funnel; the conversion column in the left position moves in front of
+  // them. The funnel scales to whatever space is left.
+  const namesLeft = PAD + (conversionOnLeft ? conversionWidth : 0);
+  const contentLeft = namesLeft + namesZone;
+  const innerWidth = Math.max(
+    10,
+    width - PAD * 2 - conversionWidth - namesZone,
+  );
   const innerHeight = Math.max(10, chartHeight - PAD * 2);
 
   const isPyramid = shape === "pyramid";
@@ -219,6 +284,12 @@ export default function Funnel(props: FunnelTransformedProps) {
   const rowsHeight = stepCount * barHeight + (stepCount - 1) * effectiveGap;
   const topOffset = PAD + Math.max(0, (innerHeight - rowsHeight) / 2);
   const centerX = contentLeft + innerWidth / 2;
+  // Compact layout for small charts: bands hang on a vertical axis at the
+  // right edge of the funnel area (the left half of the funnel shape), so
+  // the graph stays readable instead of shrinking into a tiny symmetric
+  // triangle. Band extents stay the same, only the anchoring changes.
+  const halfFunnel = innerWidth < HALF_FUNNEL_TRIGGER_PX;
+  const axisX = contentLeft + innerWidth;
 
   const stepTop = (index: number) =>
     topOffset + index * (barHeight + effectiveGap);
@@ -360,30 +431,26 @@ export default function Funnel(props: FunnelTransformedProps) {
               const stroke = selected ? theme.colorPrimary : "transparent";
               const strokeWidth = selected ? 2 : 0;
               const hovered = tooltip?.stepIndex === index;
-              const commonProps = {
-                fill: step.color,
-                stroke,
-                strokeWidth,
-                cursor,
-                style: {
-                  transition: "opacity 120ms ease-out, filter 120ms ease-out",
-                  opacity: tooltip && !hovered ? 0.82 : 1,
-                  filter: hovered ? "brightness(1.06)" : undefined,
-                },
-                onMouseMove: (event: ReactMouseEvent) =>
-                  showTooltip(index, event),
-                onClick: () => handleStepClick(step),
+              // Bands are purely visual — pointer events live on the
+              // row-wide hit rects rendered after them.
+              const bandStyle = {
+                transition: "opacity 120ms ease-out, filter 120ms ease-out",
+                opacity: tooltip && !hovered ? 0.82 : 1,
+                filter: hovered ? "brightness(1.06)" : undefined,
               };
               if (shape === "bars") {
                 return (
                   <rect
                     key={step.label + index}
-                    x={barLeft(step)}
+                    x={halfFunnel ? axisX - barWidth(step) : barLeft(step)}
                     y={stepTop(index)}
                     width={Math.max(0, barWidth(step))}
                     height={barHeight}
                     rx={2}
-                    {...commonProps}
+                    fill={step.color}
+                    stroke={stroke}
+                    strokeWidth={strokeWidth}
+                    style={bandStyle}
                   />
                 );
               }
@@ -392,33 +459,52 @@ export default function Funnel(props: FunnelTransformedProps) {
                   pyramidBandWidths(index);
                 const y1 = stepTop(index);
                 const y2 = y1 + barHeight;
-                const points = [
-                  [centerX - topWidth / 2, y1],
-                  [centerX + topWidth / 2, y1],
-                  [centerX + bottomWidth / 2, y2],
-                  [centerX - bottomWidth / 2, y2],
-                ]
-                  .map(([x, y]) => `${x},${y}`)
-                  .join(" ");
+                const points = halfFunnel
+                  ? [
+                      [axisX, y1],
+                      [axisX - topWidth, y1],
+                      [axisX - bottomWidth, y2],
+                      [axisX, y2],
+                    ]
+                  : [
+                      [centerX - topWidth / 2, y1],
+                      [centerX + topWidth / 2, y1],
+                      [centerX + bottomWidth / 2, y2],
+                      [centerX - bottomWidth / 2, y2],
+                    ];
                 return (
                   <polygon
                     key={step.label + index}
-                    points={points}
-                    {...commonProps}
+                    points={points.map(([x, y]) => `${x},${y}`).join(" ")}
+                    fill={step.color}
+                    stroke={stroke}
+                    strokeWidth={strokeWidth}
+                    style={bandStyle}
                   />
                 );
               }
               if (shape === "funnel_smooth" && smoothKnots) {
-                const d = buildSmoothBandPath({
-                  cx: centerX,
+                const shared = {
                   y0: stepTop(index),
                   height: barHeight,
                   knotsY: smoothKnots.knotsY,
                   knotsW: smoothKnots.knotsW,
                   tangents: smoothKnots.tangents,
                   index,
-                });
-                return <path key={step.label + index} d={d} {...commonProps} />;
+                };
+                const d = halfFunnel
+                  ? buildSmoothHalfBandPath({ axis: axisX, ...shared })
+                  : buildSmoothBandPath({ cx: centerX, ...shared });
+                return (
+                  <path
+                    key={step.label + index}
+                    d={d}
+                    fill={step.color}
+                    stroke={stroke}
+                    strokeWidth={strokeWidth}
+                    style={bandStyle}
+                  />
+                );
               }
               // shape === "funnel": trapezoids with sharp transitions; each
               // band keeps its own height so equal values render equally
@@ -427,22 +513,51 @@ export default function Funnel(props: FunnelTransformedProps) {
               const bottomWidth = nextStep ? barWidth(nextStep) : topWidth;
               const y1 = stepTop(index);
               const y2 = y1 + barHeight;
-              const points = [
-                [centerX - topWidth / 2, y1],
-                [centerX + topWidth / 2, y1],
-                [centerX + bottomWidth / 2, y2],
-                [centerX - bottomWidth / 2, y2],
-              ]
-                .map(([x, y]) => `${x},${y}`)
-                .join(" ");
+              const points = halfFunnel
+                ? [
+                    [axisX, y1],
+                    [axisX - topWidth, y1],
+                    [axisX - bottomWidth, y2],
+                    [axisX, y2],
+                  ]
+                : [
+                    [centerX - topWidth / 2, y1],
+                    [centerX + topWidth / 2, y1],
+                    [centerX + bottomWidth / 2, y2],
+                    [centerX - bottomWidth / 2, y2],
+                  ];
               return (
                 <polygon
                   key={step.label + index}
-                  points={points}
-                  {...commonProps}
+                  points={points.map(([x, y]) => `${x},${y}`).join(" ")}
+                  fill={step.color}
+                  stroke={stroke}
+                  strokeWidth={strokeWidth}
+                  style={bandStyle}
                 />
               );
             })}
+            {/* Row-wide transparent hit targets: a narrow band (the funnel
+                apex, thin rows) is nearly impossible to hover or click
+                directly, so every step gets an invisible strip covering the
+                whole funnel area — for the tooltip and the cross-filter
+                click. Strips tile the rows exactly (half a gap on each
+                side) and never overlap. */}
+            {steps.map((step, index) => (
+              <rect
+                key={`hit-${step.label}-${index}`}
+                x={contentLeft}
+                y={stepTop(index) - effectiveGap / 2}
+                width={innerWidth}
+                height={barHeight + effectiveGap}
+                fill="transparent"
+                cursor={cursor}
+                onMouseMove={(event: ReactMouseEvent) =>
+                  showTooltip(index, event)
+                }
+                onClick={() => handleStepClick(step)}
+              />
+            ))}
           </svg>
           {steps.map((step, index) => {
             // The label is vertically centered in the band, so for slanted
@@ -472,70 +587,108 @@ export default function Funnel(props: FunnelTransformedProps) {
                   : nextWidth;
             }
             const { left: bandLabelLeft, width: bandLabelWidth } =
-              labelBoxForBand({
-                centerX,
-                topWidth,
-                bottomWidth,
-                slanted: shape !== "bars",
-              });
+              halfFunnel
+                ? labelBoxForHalfBand({
+                    axis: axisX,
+                    topWidth,
+                    bottomWidth,
+                    slanted: shape !== "bars",
+                  })
+                : labelBoxForBand({
+                    centerX,
+                    topWidth,
+                    bottomWidth,
+                    slanted: shape !== "bars",
+                  });
             const labelJustify =
               labelAlignment === "center"
                 ? "center"
                 : labelAlignment === "right"
                   ? "flex-end"
                   : "flex-start";
-            const text = labelTexts[index];
-            const availableLabelWidth = Math.max(
+            const valueText = valueTexts[index];
+            // A value wider than its band moves out to the left of the
+            // band's edge (onto the empty background), right-aligned with
+            // it, instead of being clipped — in both the symmetric and the
+            // half-funnel layouts. When there is no room to the left (the
+            // widest band), it falls back to ellipsis inside the band.
+            const valueFits =
+              measureTextWidth(valueText, labelFont) <=
+              Math.max(0, bandLabelWidth - LABEL_INNER_PAD * 2);
+            const shiftRoom = Math.max(
               0,
-              bandLabelWidth - LABEL_INNER_PAD * 2,
+              bandLabelLeft - LABEL_OUT_GAP - contentLeft,
             );
-            const labelShifted = labelOverflows(
-              text,
-              availableLabelWidth,
-              measureLabel,
-            );
+            const valueShiftedOut = !valueFits && shiftRoom >= MIN_SHIFT_ROOM_PX;
+            const labelTextStyle: CSSProperties = {
+              fontSize: labelFontSize,
+              fontWeight: LABEL_FONT_WEIGHT,
+              fontVariantNumeric: "tabular-nums",
+              whiteSpace: "nowrap",
+            };
             return (
               <div key={`overlay-${step.label}-${index}`}>
+                <span
+                  style={{
+                    position: "absolute",
+                    left: namesLeft,
+                    top: stepTop(index),
+                    width: namesWidth,
+                    height: barHeight,
+                    display: "flex",
+                    alignItems: "center",
+                    color: theme.colorText,
+                    pointerEvents: "none",
+                    ...labelTextStyle,
+                  }}
+                >
+                  {truncateName(step.label)}
+                </span>
                 {showLabels ? (
-                  <span
-                    style={{
-                      position: "absolute",
-                      top: stepTop(index),
-                      height: barHeight,
-                      display: "flex",
-                      alignItems: "center",
-                      fontSize: labelFontSize,
-                      fontWeight: LABEL_FONT_WEIGHT,
-                      fontVariantNumeric: "tabular-nums",
-                      whiteSpace: "nowrap",
-                      pointerEvents: "none",
-                      ...(labelShifted
-                        ? {
-                            // the text does not fit the band — hang it out
-                            // to the left, right-aligned with the band's
-                            // left edge (its start)
-                            right: width - bandLabelLeft + LABEL_OUT_GAP,
-                            width: "max-content",
-                            color: labelColor || theme.colorText,
-                          }
-                        : {
-                            left: bandLabelLeft,
-                            width: Math.max(0, bandLabelWidth),
-                            justifyContent: labelJustify,
-                            padding: `0 ${LABEL_INNER_PAD}px`,
-                            boxSizing: "border-box",
-                            color:
-                              labelColor ||
-                              (isDarkColor(step.color)
-                                ? "#fff"
-                                : theme.colorText),
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                          }),
-                    }}
-                  >
-                    {text}
-                  </span>
+                  valueShiftedOut ? (
+                    <span
+                      style={{
+                        position: "absolute",
+                        right: width - bandLabelLeft + LABEL_OUT_GAP,
+                        maxWidth: shiftRoom,
+                        top: stepTop(index),
+                        height: barHeight,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "flex-end",
+                        overflow: "hidden",
+                        color: labelColor || theme.colorText,
+                        pointerEvents: "none",
+                        ...labelTextStyle,
+                      }}
+                    >
+                      <span style={{ flexShrink: 0 }}>{valueText}</span>
+                    </span>
+                  ) : (
+                    <span
+                      style={{
+                        position: "absolute",
+                        left: bandLabelLeft,
+                        top: stepTop(index),
+                        width: Math.max(0, bandLabelWidth),
+                        height: barHeight,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: labelJustify,
+                        padding: `0 ${LABEL_INNER_PAD}px`,
+                        boxSizing: "border-box",
+                        color:
+                          labelColor ||
+                          (isDarkColor(step.color) ? "#fff" : theme.colorText),
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        pointerEvents: "none",
+                        ...labelTextStyle,
+                      }}
+                    >
+                      {valueText}
+                    </span>
+                  )
                 ) : null}
                 {conversionShown ? (
                   <span
@@ -555,16 +708,13 @@ export default function Funnel(props: FunnelTransformedProps) {
                         : "flex-end",
                       width: conversionWidth - 12,
                       color: theme.colorTextSecondary,
-                      fontSize: 12,
+                      fontSize: labelFontSize,
                       fontVariantNumeric: "tabular-nums",
+                      whiteSpace: "nowrap",
                       pointerEvents: "none",
                     }}
                   >
-                    {conversionColumnContent === "value"
-                      ? valueFormatter(step.value)
-                      : conversionColumnContent === "percent_first"
-                        ? percentText(step.percentFirst, percentFormatter)
-                        : percentText(step.percentPrevious, percentFormatter)}
+                    {conversionTexts[index]}
                   </span>
                 ) : null}
               </div>

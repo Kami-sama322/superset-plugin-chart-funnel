@@ -17,12 +17,12 @@
  * under the License.
  */
 import {
-  buildLabelText,
+  buildValueText,
   cssFont,
-  labelOverflows,
   measureTextWidth,
   percentText,
   setMeasureContextFactory,
+  truncateName,
 } from "./labelUtils";
 import { FunnelStep } from "./types";
 
@@ -46,44 +46,42 @@ test("percentText formats values and renders null as empty string", () => {
   expect(percentText(null, fmtPct)).toBe("");
 });
 
-test("buildLabelText renders label, separator and metrics content", () => {
-  expect(buildLabelText(step, "value", fmtValue, fmtPct)).toBe(
-    "Signup\u00A0·\u00A01000",
-  );
-  expect(buildLabelText(step, "percent_first", fmtValue, fmtPct)).toBe(
-    "Signup\u00A0·\u00A0100%",
-  );
-  expect(buildLabelText(step, "percent_previous", fmtValue, fmtPct)).toBe(
-    "Signup\u00A0·\u00A050%",
-  );
-  expect(buildLabelText(step, "value_percent_first", fmtValue, fmtPct)).toBe(
-    "Signup\u00A0·\u00A01000 · 100%",
-  );
-  expect(
-    buildLabelText(step, "value_percent_previous", fmtValue, fmtPct),
-  ).toBe("Signup\u00A0·\u00A01000 · 50%");
+test("truncateName keeps names within the 20 char budget", () => {
+  expect(truncateName("Signup")).toBe("Signup");
+  expect(truncateName("x".repeat(20))).toBe("x".repeat(20));
+  expect(truncateName("y".repeat(21))).toBe(`${"y".repeat(17)}...`);
+  expect(truncateName("z".repeat(100))).toBe(`${"z".repeat(17)}...`);
+  expect(truncateName("")).toBe("");
 });
 
-test("buildLabelText keeps parity for null percents (empty metrics part)", () => {
+test("buildValueText renders only the metrics content for all types", () => {
+  expect(buildValueText(step, "value", fmtValue, fmtPct)).toBe("1000");
+  expect(buildValueText(step, "percent_first", fmtValue, fmtPct)).toBe("100%");
+  expect(buildValueText(step, "percent_previous", fmtValue, fmtPct)).toBe(
+    "50%",
+  );
+  expect(buildValueText(step, "value_percent_first", fmtValue, fmtPct)).toBe(
+    "1000 · 100%",
+  );
   expect(
-    buildLabelText(
+    buildValueText(step, "value_percent_previous", fmtValue, fmtPct),
+  ).toBe("1000 · 50%");
+});
+
+test("buildValueText keeps parity for null percents (empty string)", () => {
+  expect(
+    buildValueText(
       { ...step, percentFirst: null },
       "percent_first",
       fmtValue,
       fmtPct,
     ),
-  ).toBe("Signup\u00A0·\u00A0");
+  ).toBe("");
 });
 
 test("cssFont builds a canvas font shorthand with the label weight", () => {
   expect(cssFont(12, "Inter, sans-serif")).toBe("500 12px Inter, sans-serif");
   expect(cssFont(14, "Roboto", 700)).toBe("700 14px Roboto");
-});
-
-test("labelOverflows compares the measured width with the available width", () => {
-  expect(labelOverflows("wide label", 10, () => 42)).toBe(true);
-  expect(labelOverflows("short", 42, () => 42)).toBe(false);
-  expect(labelOverflows("short", 43, () => 42)).toBe(false);
 });
 
 test("measureTextWidth returns 0 for empty text without touching the canvas", () => {

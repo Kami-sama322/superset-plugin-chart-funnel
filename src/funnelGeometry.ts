@@ -131,6 +131,26 @@ export function labelBoxForBand(params: {
 }
 
 /**
+ * Label box of a half-funnel band. Half-funnel bands are anchored to a
+ * vertical axis on the right and taper only to the left, so the box spans
+ * from the band's left edge to the axis itself.
+ */
+export function labelBoxForHalfBand(params: {
+  /** x of the vertical axis the bands hang on */
+  axis: number;
+  /** band extent at its top edge */
+  topWidth: number;
+  /** band extent at its bottom edge; defaults to topWidth */
+  bottomWidth?: number;
+  /** true for slanted shapes (funnel, smooth funnel, pyramid) */
+  slanted: boolean;
+}): LabelBox {
+  const { axis, topWidth, bottomWidth = topWidth, slanted } = params;
+  const width = Math.max(0, slanted ? (topWidth + bottomWidth) / 2 : topWidth);
+  return { left: axis - width, width };
+}
+
+/**
  * Width of a smooth band's bottom edge. The knot spline spans
  * (height + gap) vertically between band tops, but the band itself only
  * (height) — its bottom edge sits part-way along the segment. Linear in
@@ -191,8 +211,7 @@ export function buildSmoothBandPath(params: SmoothBandParams): string {
     knotsW[segIndex + 1],
     tangents[segIndex + 1],
   );
-  let c1 = seg.c1;
-  let c2 = seg.c2;
+  let { c1, c2 } = seg;
   let endY = knotsY[segIndex + 1];
   let endW = knotsW[segIndex + 1];
   if (!isLast && y1 < endY) {
@@ -212,6 +231,59 @@ export function buildSmoothBandPath(params: SmoothBandParams): string {
     `C${round(x(c1[1], -1))} ${round(c1[0])} ${round(x(c2[1], -1))} ${round(c2[0])} ${round(x(endW, -1))} ${round(endY)}`,
     `L${round(x(endW, 1))} ${round(endY)}`,
     `C${round(x(c2[1], 1))} ${round(c2[0])} ${round(x(c1[1], 1))} ${round(c1[0])} ${round(x(startW, 1))} ${round(y0)}`,
+    "Z",
+  ].join(" ");
+}
+
+/**
+ * Half-funnel variant of the smooth band: the left edge follows the same
+ * monotone spline through the knot extents, the right edge is the vertical
+ * axis the bands hang on. Knot widths are the leftward extents (the same
+ * numbers the symmetric band uses as full widths).
+ */
+export function buildSmoothHalfBandPath(params: {
+  /** x of the vertical axis */
+  axis: number;
+  /** band top y */
+  y0: number;
+  height: number;
+  knotsY: number[];
+  knotsW: number[];
+  tangents: number[];
+  index: number;
+}): string {
+  const { axis, y0, height, knotsY, knotsW, tangents, index } = params;
+  const y1 = y0 + height;
+  const n = knotsY.length;
+  const segIndex = Math.min(index, n - 2);
+  const isLast = index >= n - 2;
+  const seg = hermiteToBezier(
+    knotsY[segIndex],
+    knotsW[segIndex],
+    tangents[segIndex],
+    knotsY[segIndex + 1],
+    knotsW[segIndex + 1],
+    tangents[segIndex + 1],
+  );
+  let { c1, c2 } = seg;
+  let endY = knotsY[segIndex + 1];
+  let endW = knotsW[segIndex + 1];
+  if (!isLast && y1 < endY) {
+    // the band bottom lies inside the segment (gapped layout) — split it
+    const t = (y1 - knotsY[segIndex]) / (endY - knotsY[segIndex]);
+    const yPart = splitCubicFirstPart(knotsY[segIndex], c1[0], c2[0], endY, t);
+    const wPart = splitCubicFirstPart(knotsW[segIndex], c1[1], c2[1], endW, t);
+    c1 = [yPart[0], wPart[0]];
+    c2 = [yPart[1], wPart[1]];
+    endY = yPart[2];
+    endW = wPart[2];
+  }
+  const startW = knotsW[segIndex];
+  return [
+    `M${round(axis)} ${round(y0)}`,
+    `L${round(axis - startW)} ${round(y0)}`,
+    `C${round(axis - c1[1])} ${round(c1[0])} ${round(axis - c2[1])} ${round(c2[0])} ${round(axis - endW)} ${round(endY)}`,
+    `L${round(axis)} ${round(endY)}`,
     "Z",
   ].join(" ");
 }

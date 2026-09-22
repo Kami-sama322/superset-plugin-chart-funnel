@@ -432,6 +432,9 @@ const config: ControlPanelConfig = {
             config: {
               type: "CheckboxControl",
               label: t("Show labels"),
+              description: t(
+                "Show values/percentages inside the funnel bars. Step names in the left column are always shown.",
+              ),
               renderTrigger: true,
               default: true,
             },
@@ -443,6 +446,9 @@ const config: ControlPanelConfig = {
             config: {
               type: "SelectControl",
               label: t("Label alignment"),
+              description: t(
+                "Alignment of the values inside the funnel bars. Step names are always left-aligned.",
+              ),
               renderTrigger: true,
               default: "left",
               clearable: false,
@@ -463,7 +469,7 @@ const config: ControlPanelConfig = {
               type: LabelColorControl,
               label: t("Label color"),
               description: t(
-                "Font color for bar labels. Clear the color to use the automatic contrast.",
+                "Font color for the values inside the funnel bars. Clear the color to use the automatic contrast.",
               ),
               renderTrigger: true,
               default: null,
@@ -504,7 +510,7 @@ const config: ControlPanelConfig = {
             config: {
               type: "SelectControl",
               label: t("Label content"),
-              description: t("What to show on each funnel bar"),
+              description: t("What to show inside each funnel bar"),
               renderTrigger: true,
               default: "value",
               visibility: ({ controls }: ControlPanelsContainerProps) =>
@@ -560,6 +566,9 @@ const config: ControlPanelConfig = {
             config: {
               type: "SelectControl",
               label: t("Conversion column position"),
+              description: t(
+                "Left places the column before the step names; right places it after the funnel.",
+              ),
               renderTrigger: true,
               default: "right",
               clearable: false,

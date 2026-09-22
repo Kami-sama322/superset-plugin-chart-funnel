@@ -18,15 +18,18 @@
  */
 import { FunnelStep, LabelContentType } from "./types";
 
-/** Horizontal padding inside the in-band label box (px) */
+/** Horizontal padding inside the funnel-bar value box (px) */
 export const LABEL_INNER_PAD = 10;
-/** Gap between a shifted-out label and the band edge it hangs on (px) */
+/** Gap between a shifted-out value and the band edge it hangs on (px) */
 export const LABEL_OUT_GAP = 6;
-/** Font weight of the band labels (kept in sync with the label style) */
+/** Font weight of the chart labels (kept in sync with the label styles) */
 export const LABEL_FONT_WEIGHT = 500;
+/** Maximum rendered length of a step name in the left column */
+export const MAX_NAME_CHARS = 20;
+/** Gap between the step-name column and the funnel / conversion zone (px) */
+export const NAMES_GAP = 12;
 
-const NBSP = "\u00A0";
-const SEP = `${NBSP}·${NBSP}`;
+const NAME_ELLIPSIS = "...";
 
 export function percentText(
   value: number | null,
@@ -35,7 +38,19 @@ export function percentText(
   return value === null ? "" : format(value);
 }
 
-function metricsText(
+/** Step name for the left column, capped at MAX_NAME_CHARS with "..." */
+export function truncateName(name: string): string {
+  return name.length > MAX_NAME_CHARS
+    ? name.slice(0, MAX_NAME_CHARS - NAME_ELLIPSIS.length) + NAME_ELLIPSIS
+    : name;
+}
+
+/**
+ * Value part of a funnel bar label: the metric content selected by
+ * Label content (value / percents / combos), rendered inside the bar.
+ * The step name lives in the separate left column, never here.
+ */
+export function buildValueText(
   step: FunnelStep,
   contentType: LabelContentType,
   formatValue: (v: number) => string,
@@ -55,25 +70,6 @@ function metricsText(
     default:
       return value;
   }
-}
-
-/**
- * Exact text rendered in a band label: "<label>·<metrics>" with
- * non-breaking spaces around the separator. Shared by the renderer and
- * the overflow measurement so both always see the same string.
- */
-export function buildLabelText(
-  step: FunnelStep,
-  contentType: LabelContentType,
-  formatValue: (v: number) => string,
-  formatPercent: (v: number) => string,
-): string {
-  return `${step.label}${SEP}${metricsText(
-    step,
-    contentType,
-    formatValue,
-    formatPercent,
-  )}`;
 }
 
 /** CSS font shorthand for canvas text measurement. */
@@ -117,14 +113,14 @@ function getMeasureContext(): CanvasRenderingContext2D | null {
 
 /** Bounded result cache — measureText runs on every render of the chart
  * (tooltip mouse moves re-render the whole component), and measuring the
- * same label/font pair over and over is pure waste. */
+ * same string/font pair over and over is pure waste. */
 const MEASURE_CACHE_LIMIT = 500;
 let measureCache: Record<string, number> = {};
 
 /**
  * Rendered width of `text` in the given CSS font via canvas measureText.
  * Returns 0 when no canvas is available (SSR, unit tests) — the caller
- * then never sees an overflow and keeps the classic in-band layout.
+ * then sees a zero-width name column and keeps the funnel full-width.
  */
 export function measureTextWidth(text: string, font: string): number {
   if (!text) {
@@ -146,15 +142,4 @@ export function measureTextWidth(text: string, font: string): number {
   }
   measureCache[cacheKey] = width;
   return width;
-}
-
-export type LabelMeasure = (text: string) => number;
-
-/** True when the label text is wider than the space it is given. */
-export function labelOverflows(
-  text: string,
-  availableWidth: number,
-  measure: LabelMeasure,
-): boolean {
-  return measure(text) > availableWidth;
 }

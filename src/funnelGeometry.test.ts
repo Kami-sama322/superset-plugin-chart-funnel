@@ -18,8 +18,10 @@
  */
 import {
   buildSmoothBandPath,
+  buildSmoothHalfBandPath,
   hermiteToBezier,
   labelBoxForBand,
+  labelBoxForHalfBand,
   monotoneTangents,
   smoothBandBottomWidth,
   splitCubicFirstPart,
@@ -87,6 +89,58 @@ test("labelBoxForBand defaults the bottom edge to the top width", () => {
   const box = labelBoxForBand({ centerX: 50, topWidth: 40, slanted: true });
   expect(box.width).toBe(40);
   expect(box.left).toBe(30);
+});
+
+test("labelBoxForHalfBand anchors the box to the axis", () => {
+  // bars: box spans the band extent, right edge on the axis
+  const bars = labelBoxForHalfBand({
+    axis: 200,
+    topWidth: 80,
+    slanted: false,
+  });
+  expect(bars.width).toBe(80);
+  expect(bars.left).toBe(120);
+  // slanted band: mid-row extent, right edge on the axis
+  const slanted = labelBoxForHalfBand({
+    axis: 200,
+    topWidth: 300,
+    bottomWidth: 100,
+    slanted: true,
+  });
+  expect(slanted.width).toBe(200);
+  expect(slanted.left).toBe(0);
+  // negative widths collapse to a zero box at the axis
+  const degenerate = labelBoxForHalfBand({
+    axis: 50,
+    topWidth: -10,
+    slanted: false,
+  });
+  expect(degenerate.width).toBe(0);
+  expect(degenerate.left).toBe(50);
+});
+
+test("buildSmoothHalfBandPath keeps the right edge on the axis", () => {
+  const d = buildSmoothHalfBandPath({
+    axis: 200,
+    y0: 0,
+    height: 20,
+    knotsY: [0, 20, 40],
+    knotsW: [100, 60, 30],
+    tangents: monotoneTangents([0, 20, 40], [100, 60, 30]),
+    index: 0,
+  });
+  expect(d.startsWith("M200 0")).toBe(true);
+  expect(d).toContain("C");
+  expect(d.endsWith("Z")).toBe(true);
+  // top-left corner is the top extent to the left of the axis
+  expect(d).toContain("L100 0");
+  // bottom edge returns to the axis at the band bottom
+  expect(d).toContain("L200 20");
+  // every x stays at or left of the axis
+  const xs = [...d.matchAll(/-?[\d.]+(?= )/g)].map((match) =>
+    Number(match[0]),
+  );
+  xs.filter((x) => Number.isFinite(x)).forEach((x) => expect(x).toBeLessThanOrEqual(200));
 });
 
 test("monotoneTangents recovers the slope for linear data", () => {

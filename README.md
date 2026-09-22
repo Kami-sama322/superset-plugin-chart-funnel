@@ -38,7 +38,17 @@
   the **first field** in Step fields — arrange the fields from the base
   toward the apex
 - Power BI–compatible **label content**: data value / % of first /
-  % of previous / combinations
+  % of previous / combinations, rendered inside the bars. A value that
+  does not fit its bar is moved just left of the bar's edge, right-aligned
+  with it (ellipsis inside the bar when there is no room to the left).
+  **Step names** sit in their own left column — always visible,
+  left-aligned, capped at 20 characters with `...`; the column hugs the
+  longest name and the funnel scales to the remaining space
+- **Compact half-funnel for small charts**: when the funnel area is
+  narrower than 240px, the chart renders the left half of the funnel —
+  bands hang on a vertical axis at the right edge and taper only to the
+  left, so the graph stays readable instead of shrinking into a tiny
+  symmetric triangle
 - **Two shapes**: *Rectangles* (separated centered bars, Power BI look) and
   *Funnel* (continuous trapezoids)
 - **Two extra shapes**: *Smooth funnel* (curved transitions, monotone cubic
@@ -198,8 +208,8 @@ Columns selected in **Tooltip contents** are available by their names
 | Color mode | Gradient / Custom per-step colors |
 | Gradient color scheme | Sequential scheme (gradient mode) |
 | Step colors | Ready-made per-step picker list (populated from the query result / step fields); unset steps fall back to the categorical scheme |
-| Show labels + Label content | Label visibility and what the bar label shows: Data value / % of first / % of previous / combos. A label that does not fit a narrow step is shifted out to the left of the step, right-aligned with its left edge |
-| Conversion column | Checkbox + content select: Data value / % of previous / % of first |
+| Show labels + Label content | Visibility of the values inside the funnel bars and their content: Data value / % of first / % of previous / combos. Step names live in a separate left column (always visible, left-aligned, capped at 20 chars with `...`); alignment/color/size settings apply to the in-bar values only |
+| Conversion column | Checkbox + content select: Data value / % of previous / % of first. Left position places the column before the step names; right position places it after the funnel. The column font follows Label font size |
 | Bar height, % | 100% = bars fill the screen (default), lower = thinner; the gap is a physical separation and stays intact |
 | Number format / Percent format | Standard Superset D3 format controls |
 
