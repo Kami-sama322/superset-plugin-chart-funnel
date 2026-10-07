@@ -137,8 +137,8 @@ npm install
 npm run dev-server
 ```
 
-Production image builds work the same way — see the sibling
-`superset-prod-dockerfile/` repository.
+For a quick check without a local environment, use the self-contained
+Docker stack of this repository (see "✅ Verification").
 
 ---
 
@@ -217,13 +217,21 @@ Columns selected in **Tooltip contents** are available by their names
 
 ## ✅ Verification
 
+This repo ships a self-contained stack: `Dockerfile` builds Superset **6.1.0**
+with the plugin baked in; `docker-compose.yml` runs it with `superset_config.py`
+mounted read-only (it enables `'unsafe-eval'` in the CSP — required by the
+Handlebars tooltip templates).
+
 ```bash
-# Local production-style image (plugins are COPY-ed from sibling dirs)
-cd superset-prod-dockerfile
-docker compose -f docker-compose.dev.yml build
-docker compose -f docker-compose.dev.yml up -d
+docker compose build    # first run: clones Superset 6.1.0 + npm run build (15–40 min)
+docker compose up -d    # init DB, admin admin/admin, load-examples on first start
 # http://localhost:8088 — Charts → + Chart → Funnel
 ```
+
+On first start the container runs `superset db upgrade`, creates the admin user,
+and loads example datasets (1–3 minutes). Later starts skip init if the volume
+exists. Reset environment (fresh DB and examples):
+`docker compose down -v && docker compose up -d`.
 
 Unit tests live in `src/*.test.ts` (Jest). After running `install.sh`
 they can be executed from the Superset frontend tree:

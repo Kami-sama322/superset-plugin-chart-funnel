@@ -136,8 +136,8 @@ npm install
 npm run dev-server
 ```
 
-Production-сборки работают так же — см. соседний репозиторий
-`superset-prod-dockerfile/`.
+Быстрая проверка без локального окружения — автономный Docker-стенд
+этого репозитория (см. «✅ Проверка»).
 
 ---
 
@@ -217,13 +217,21 @@ Production-сборки работают так же — см. соседний 
 
 ## ✅ Проверка
 
+В репозитории есть автономный стенд: `Dockerfile` собирает Superset **6.1.0**
+с уже встроенным плагином; `docker-compose.yml` монтирует `superset_config.py`
+read-only (включает `'unsafe-eval'` в CSP — требование Handlebars-шаблонов
+тултипов).
+
 ```bash
-# Локальный prod-подобный образ (плагины COPY-атся из sibling-каталогов)
-cd superset-prod-dockerfile
-docker compose -f docker-compose.dev.yml build
-docker compose -f docker-compose.dev.yml up -d
+docker compose build    # первый раз: клон Superset 6.1.0 + npm run build (15–40 мин)
+docker compose up -d    # init БД, admin/admin, load-examples при первом запуске
 # http://localhost:8088 — Charts → + Chart → Funnel
 ```
+
+При первом запуске контейнер выполняет `superset db upgrade`, создаёт админа
+и загружает примеры датасетов (1–3 мин). Повторные запуски пропускают init,
+если том сохранён. Сброс окружения (чистая БД и примеры):
+`docker compose down -v && docker compose up -d`.
 
 Unit-тесты лежат в `src/*.test.ts` (Jest). После запуска `install.sh`
 их можно выполнить из дерева frontend Superset:
